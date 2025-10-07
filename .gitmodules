@@ -1,0 +1,6 @@
+[submodule "nerf"]
+	path = nerf
+	url = https://github.com/bmild/nerf.git
+[submodule "submodules/nerf"]
+	path = submodules/nerf
+	url = https://github.com/bmild/nerf.git
