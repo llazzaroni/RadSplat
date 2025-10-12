@@ -4,6 +4,7 @@ from jax import random
 import jax
 import jax.numpy as jnp
 from flax.training import checkpoints
+import json
 
 from submodules.camp_zipnerf.camp_zipnerf.internal import models  
 from submodules.camp_zipnerf.camp_zipnerf.internal import datasets
@@ -16,6 +17,8 @@ def sample_rays(config, n : int = 1_000_000) -> utils.Rays:
     logging.info("Loading data from: " + config.data_dir)
 
     dataset = datasets.load_dataset('test', config.data_dir, config)
+
+    logging.info("Dataset loaded")
 
     sampling_distribution = distribute_values(n, dataset.size)
 
@@ -69,12 +72,14 @@ class Model:
 if __name__ == "__main__":
     
 
+    logging.info("Start...")
     config = configs.Config()
 
-    config.data_dir = '/home/bolla/Documents/course_materials/ds_lab/data/nyc/nyc'
-    config.checkpoint_dir = '/home/bolla/Documents/course_materials/ds_lab/checkpoints/camp_nerf_officials/nyc'
+    config.data_dir = '/home/rbollati/ds-lab/data/nyc'
+    config.checkpoint_dir = '/home/rbollati/ds-lab/checkpoints/camp_official/nyc'
 
 
+    logging.info("Sampling Rays")
     rays = sample_rays(config, 10)
     single_ray = jax.tree_util.tree_map(lambda x: x[:1], rays)
 
@@ -86,9 +91,21 @@ if __name__ == "__main__":
     depth = renderings[-1]['distance']  # if available
     acc = renderings[-1]['acc']
 
-    pred_color = jnp.squeeze(rgb)  # shape (3,)
 
-    print(pred_color)
+    result = {
+            'rgb' : rgb,
+            'depth' : depth
+            'acc' : acc
+         } 
+
+
+    with open('/home/rbollati/ds-lab/result.json' , 'w') as f:
+        json.dump(result, f, indent =2)
+
+
+    # pred_color = jnp.squeeze(rgb)  # shape (3,)
+
+
 
     # TODO initialize model
 
@@ -96,5 +113,4 @@ if __name__ == "__main__":
 
     # get z median
 
-    # frmat results
-
+    # frmat resuls
