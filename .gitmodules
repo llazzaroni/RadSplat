@@ -1,9 +1,0 @@
-[submodule "nerf"]
-	path = nerf
-	url = https://github.com/bmild/nerf.git
-[submodule "submodules/nerf"]
-	path = submodules/nerf
-	url = https://github.com/bmild/nerf.git
-[submodule "submodules/camp_zipnerf"]
-	path = submodules/camp_zipnerf
-	url = https://github.com/jonbarron/camp_zipnerf.git
