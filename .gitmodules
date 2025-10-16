@@ -1,0 +1,3 @@
+[submodule "submodules/nerfstudio"]
+	path = submodules/nerfstudio
+	url = https://github.com/nerfstudio-project/nerfstudio.git
