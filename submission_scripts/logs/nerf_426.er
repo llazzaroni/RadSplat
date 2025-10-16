@@ -1,0 +1,9 @@
+++ hostname
+++ date
++ echo 'Job started on studgpu-node01.inf.ethz.ch at Thu Oct 16 14:52:34 CEST 2025'
++ mkdir -p logs
++ echo 'Activating conda environment'
++ conda activate nerfstudio
+
+CondaError: Run 'conda init' before 'conda activate'
+

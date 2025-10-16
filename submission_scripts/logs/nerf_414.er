@@ -1,0 +1,37 @@
+
+CondaError: Run 'conda init' before 'conda activate'
+
+/home/rbollati/miniconda3/envs/nerfstudio/lib/python3.8/site-packages/torch/cuda/__init__.py:215: UserWarning: 
+NVIDIA GeForce RTX 5060 Ti with CUDA capability sm_120 is not compatible with the current PyTorch installation.
+The current PyTorch install supports CUDA capabilities sm_50 sm_60 sm_70 sm_75 sm_80 sm_86 sm_37 sm_90.
+If you want to use the NVIDIA GeForce RTX 5060 Ti GPU with PyTorch, please check the instructions at https://pytorch.org/get-started/locally/
+
+  warnings.warn(
+Traceback (most recent call last):
+  File "/home/rbollati/miniconda3/envs/nerfstudio/bin/ns-train", line 8, in <module>
+    sys.exit(entrypoint())
+  File "/home/rbollati/miniconda3/envs/nerfstudio/lib/python3.8/site-packages/nerfstudio/scripts/train.py", line 262, in entrypoint
+    main(
+  File "/home/rbollati/miniconda3/envs/nerfstudio/lib/python3.8/site-packages/nerfstudio/scripts/train.py", line 247, in main
+    launch(
+  File "/home/rbollati/miniconda3/envs/nerfstudio/lib/python3.8/site-packages/nerfstudio/scripts/train.py", line 189, in launch
+    main_func(local_rank=0, world_size=world_size, config=config)
+  File "/home/rbollati/miniconda3/envs/nerfstudio/lib/python3.8/site-packages/nerfstudio/scripts/train.py", line 99, in train_loop
+    trainer.setup()
+  File "/home/rbollati/miniconda3/envs/nerfstudio/lib/python3.8/site-packages/nerfstudio/engine/trainer.py", line 158, in setup
+    self.pipeline = self.config.pipeline.setup(
+  File "/home/rbollati/miniconda3/envs/nerfstudio/lib/python3.8/site-packages/nerfstudio/configs/base_config.py", line 53, in setup
+    return self._target(self, **kwargs)
+  File "/home/rbollati/miniconda3/envs/nerfstudio/lib/python3.8/site-packages/nerfstudio/pipelines/base_pipeline.py", line 254, in __init__
+    self.datamanager: DataManager = config.datamanager.setup(
+  File "/home/rbollati/miniconda3/envs/nerfstudio/lib/python3.8/site-packages/nerfstudio/configs/base_config.py", line 53, in setup
+    return self._target(self, **kwargs)
+  File "/home/rbollati/miniconda3/envs/nerfstudio/lib/python3.8/site-packages/nerfstudio/data/datamanagers/parallel_datamanager.py", line 163, in __init__
+    self.train_dataparser_outputs: DataparserOutputs = self.dataparser.get_dataparser_outputs(split="train")
+  File "/home/rbollati/miniconda3/envs/nerfstudio/lib/python3.8/site-packages/nerfstudio/data/dataparsers/base_dataparser.py", line 165, in get_dataparser_outputs
+    dataparser_outputs = self._generate_dataparser_outputs(split, **kwargs)
+  File "/home/rbollati/miniconda3/envs/nerfstudio/lib/python3.8/site-packages/nerfstudio/data/dataparsers/nerfstudio_dataparser.py", line 96, in _generate_dataparser_outputs
+    meta = load_from_json(self.config.data / "transforms.json")
+  File "/home/rbollati/miniconda3/envs/nerfstudio/lib/python3.8/site-packages/nerfstudio/utils/io.py", line 30, in load_from_json
+    with open(filename, encoding="UTF-8") as file:
+FileNotFoundError: [Errno 2] No such file or directory: '/work/courses/dslab/team20/data/bicycle/transforms.json'

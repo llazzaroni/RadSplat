@@ -1,0 +1,4 @@
+
+CondaError: Run 'conda init' before 'conda activate'
+
+/var/spool/slurm/d/job00413/slurm_script: line 24: ${$DATA_DIR}: bad substitution

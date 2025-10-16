@@ -1,0 +1,55 @@
+++ hostname
+++ date
++ echo 'Job started on studgpu-node01.inf.ethz.ch at Thu Oct 16 14:51:23 CEST 2025'
++ mkdir -p logs
++ source /home/rbollati/miniconda3/etc/profile.d/conda.sh
+++ export CONDA_EXE=/home/rbollati/miniconda3/bin/conda
+++ CONDA_EXE=/home/rbollati/miniconda3/bin/conda
+++ export _CONDA_EXE=/home/rbollati/miniconda3/bin/conda
+++ _CONDA_EXE=/home/rbollati/miniconda3/bin/conda
+++ export _CE_M=
+++ _CE_M=
+++ export _CE_CONDA=
+++ _CE_CONDA=
+++ export CONDA_PYTHON_EXE=/home/rbollati/miniconda3/bin/python
+++ CONDA_PYTHON_EXE=/home/rbollati/miniconda3/bin/python
+++ export _CONDA_ROOT=/home/rbollati/miniconda3
+++ _CONDA_ROOT=/home/rbollati/miniconda3
+++ '[' -z x ']'
++ echo 'Activating conda environment'
++ conda activate nerfstudio
++ local cmd=activate
++ case "$cmd" in
++ __conda_activate activate nerfstudio
++ '[' -n '' ']'
++ local ask_conda
+++ PS1=
+++ __conda_exe shell.posix activate nerfstudio
+++ '[' -n '' ']'
+++ /home/rbollati/miniconda3/bin/conda shell.posix activate nerfstudio
++ ask_conda='. "/home/rbollati/miniconda3/envs/nerfstudio/etc/conda/deactivate.d/nerfstudio_deactivate.sh"
+export _CE_M='\'''\''
+export _CE_CONDA='\'''\''
+PS1='\''(nerfstudio) '\''
+export PATH='\''/home/rbollati/miniconda3/envs/nerfstudio/bin:/home/rbollati/miniconda3/condabin:/home/rbollati/.local/bin:/home/rbollati/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin'\''
+export CONDA_SHLVL='\''3'\''
+export CONDA_PROMPT_MODIFIER='\''(nerfstudio) '\''
+export CONDA_EXE='\''/home/rbollati/miniconda3/bin/conda'\''
+export _CONDA_EXE='\''/home/rbollati/miniconda3/bin/conda'\''
+export CONDA_PYTHON_EXE='\''/home/rbollati/miniconda3/bin/python'\''
+export _CONDA_ROOT='\''/home/rbollati/miniconda3'\''
+. "/home/rbollati/miniconda3/envs/nerfstudio/etc/conda/activate.d/nerfstudio_activate.sh"'
++ eval '. "/home/rbollati/miniconda3/envs/nerfstudio/etc/conda/deactivate.d/nerfstudio_deactivate.sh"
+export _CE_M='\'''\''
+export _CE_CONDA='\'''\''
+PS1='\''(nerfstudio) '\''
+export PATH='\''/home/rbollati/miniconda3/envs/nerfstudio/bin:/home/rbollati/miniconda3/condabin:/home/rbollati/.local/bin:/home/rbollati/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin'\''
+export CONDA_SHLVL='\''3'\''
+export CONDA_PROMPT_MODIFIER='\''(nerfstudio) '\''
+export CONDA_EXE='\''/home/rbollati/miniconda3/bin/conda'\''
+export _CONDA_EXE='\''/home/rbollati/miniconda3/bin/conda'\''
+export CONDA_PYTHON_EXE='\''/home/rbollati/miniconda3/bin/python'\''
+export _CONDA_ROOT='\''/home/rbollati/miniconda3'\''
+. "/home/rbollati/miniconda3/envs/nerfstudio/etc/conda/activate.d/nerfstudio_activate.sh"'
+++ . /home/rbollati/miniconda3/envs/nerfstudio/etc/conda/deactivate.d/nerfstudio_deactivate.sh
+/home/rbollati/miniconda3/envs/nerfstudio/etc/conda/deactivate.d/nerfstudio_deactivate.sh: line 3: ZSH_VERSION: unbound variable
