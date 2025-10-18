@@ -1,0 +1,61 @@
+##################### [Job started] #####################
+Sat Oct 18 01:20:43 2025       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.82.07              Driver Version: 580.82.07      CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA GeForce RTX 5060 Ti     On  |   00000000:04:00.0 Off |                  N/A |
+|  0%   28C    P8              9W /  180W |       2MiB /  16311MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+##################### [activating conda environmern] #####################
+no change     /work/courses/dslab/team20/miniconda3/condabin/conda
+no change     /work/courses/dslab/team20/miniconda3/bin/conda
+no change     /work/courses/dslab/team20/miniconda3/bin/conda-env
+no change     /work/courses/dslab/team20/miniconda3/bin/activate
+no change     /work/courses/dslab/team20/miniconda3/bin/deactivate
+no change     /work/courses/dslab/team20/miniconda3/etc/profile.d/conda.sh
+no change     /work/courses/dslab/team20/miniconda3/etc/fish/conf.d/conda.fish
+no change     /work/courses/dslab/team20/miniconda3/shell/condabin/Conda.psm1
+no change     /work/courses/dslab/team20/miniconda3/shell/condabin/conda-hook.ps1
+no change     /work/courses/dslab/team20/miniconda3/lib/python3.13/site-packages/xontrib/conda.xsh
+no change     /work/courses/dslab/team20/miniconda3/etc/profile.d/conda.csh
+no change     /home/rbollati/.bashrc
+No action taken.
+load cuda module
+load gcc
+Using nvcc at: /cluster/data/cuda/12.8.1/bin/nvcc
+nvcc: NVIDIA (R) Cuda compiler driver
+Copyright (c) 2005-2025 NVIDIA Corporation
+Built on Fri_Feb_21_20:23:50_PST_2025
+Cuda compilation tools, release 12.8, V12.8.93
+Build cuda_12.8.r12.8/compiler.35583870_0
+CUDA_HOME: /cluster/data/cuda/12.8.1
+sanity check
+Torch: 2.10.0.dev20251017+cu128 CUDA: 12.8 avail: True
+Device: NVIDIA GeForce RTX 5060 Ti CC: (12, 0)
+TCNN_CUDA_ARCHITECTURES: 120
+tinycudann import OK
+build cuda backend
+Using pip 25.2 from /work/courses/dslab/team20/miniconda3/envs/ns50/lib/python3.10/site-packages/pip (python 3.10)
+Collecting git+https://github.com/SuLvXiangXin/zipnerf-pytorch#subdirectory=extensions/cuda
+  Cloning https://github.com/SuLvXiangXin/zipnerf-pytorch to /tmp/pip-req-build-uohegbdr
+  Resolved https://github.com/SuLvXiangXin/zipnerf-pytorch to commit e081caeb81473fac6f057ceb2e560207b4ba5112
+  Preparing metadata (setup.py): started
+  Preparing metadata (setup.py): finished with status 'done'
+Building wheels for collected packages: cuda_backend
+  Building wheel for cuda_backend (setup.py): started
+  Building wheel for cuda_backend (setup.py): finished with status 'error'
+  Running setup.py clean for cuda_backend
+Failed to build cuda_backend
