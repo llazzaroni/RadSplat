@@ -58,7 +58,6 @@ class Model:
             print("###################################### run model")
 
             outputs = self.model.get_outputs_for_camera(camera)
-            self.model.get_outputs()
             image = outputs["rgb"]
 
             return image
@@ -68,6 +67,8 @@ class Model:
     def create_rays(self):
 
         if self.pipeline.datamanager.train_dataset:
+
+            scene_box = self.model.scene_box
 
             cameras: Cameras = self.pipeline.datamanager.train_dataset.cameras
 
@@ -82,7 +83,7 @@ class Model:
                 dtype=torch.float32,
             )
 
-            rays = cameras.generate_rays(camera_indices=i, coords = coords)
+            rays = cameras.generate_rays(camera_indices=i, coords = coords, aabb_box=scene_box)
 
             return rays
 
