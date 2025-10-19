@@ -35,6 +35,7 @@ class Model:
         self.checkpoint_folder = Path(checkpoint_folder)
         self.pipeline, self.model = self._load_model()
         self._load_model()
+        self.device = next(self.model.parameters()).device
 
         print("###################################### model loaded")
 
@@ -71,6 +72,7 @@ class Model:
         if self.pipeline.datamanager.train_dataset:
 
             cameras: Cameras = self.pipeline.datamanager.train_dataset.cameras
+            cameras = cameras.to(device=self.device)
 
             i = 0
 
@@ -81,15 +83,17 @@ class Model:
                     [200, 120],
                 ],
                 dtype=torch.float32,
+                device=self.device
             )
 
             rays = cameras.generate_rays(camera_indices=i, coords = coords)
             rays = self.model.collider.set_nears_and_fars(rays)
 
-            return rays
+            return rays.to(self.device)
 
     def sample_rays(self, rays : RayBundle):
 
+        rays = rays.to(self.device)
         sampler = SpacedSampler(
                     spacing_fn= lambda x : x,
                     spacing_fn_inv= lambda x : x,
@@ -98,18 +102,24 @@ class Model:
         
         sampled = sampler.generate_ray_samples(rays, 10)
         print(sampled)
-        return sampled
+        return sampled.to(self.device)
 
     def evaluate_points(self, ray_samples : RaySamples):
 
-        field_outputs = self.model.field.forward(ray_samples, compute_normals=False)
+        ray_samples = ray_samples.to(self.device)
 
-        weights = ray_samples.get_weights(field_outputs["density"])
+        with torch.no_grad():
 
-        rgb = self.model.renderer_rgb(rgb=field_outputs["rgb"], weights=weights)
-        depth = self.model.renderer_depth(weights=weights, ray_samples=ray_samples)
-        expected_depth = self.model.renderer_expected_depth(weights=weights, ray_samples=ray_samples)
-        accumulation = self.model.renderer_accumulation(weights=weights)
+            field_outputs = self.model.field.forward(ray_samples, compute_normals=False)
+
+            print(field_outputs)
+
+            weights = ray_samples.get_weights(field_outputs["density"])
+
+            rgb = self.model.renderer_rgb(rgb=field_outputs["rgb"], weights=weights)
+            depth = self.model.renderer_depth(weights=weights, ray_samples=ray_samples)
+            expected_depth = self.model.renderer_expected_depth(weights=weights, ray_samples=ray_samples)
+            accumulation = self.model.renderer_accumulation(weights=weights)
 
         outputs = {
             "rgb": rgb,
