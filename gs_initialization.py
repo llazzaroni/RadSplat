@@ -1,4 +1,6 @@
 from submodules.nerfstudio.nerfstudio.cameras.cameras import Cameras
+from submodules.nerfstudio.nerfstudio.cameras.rays import RayBundle
+from submodules.nerfstudio.nerfstudio.model_components.ray_samplers import SpacedSampler, UniformSampler
 import torchvision
 import warnings
 
@@ -63,7 +65,7 @@ class Model:
 
         return None
 
-    def render_rays(self):
+    def create_rays(self):
 
         if self.pipeline.datamanager.train_dataset:
 
@@ -84,12 +86,26 @@ class Model:
 
             return rays
 
+    def sample_rays(self, rays : RayBundle):
+
+        sampler = SpacedSampler(
+                    spacing_fn= lambda x : x,
+                    spacing_fn_inv= lambda x : x,
+                    num_samples= 10
+                ) 
+        
+        sampled = sampler.generate_ray_samples(rays, 10)
+        print(sampled)
+
+
+
 
 if __name__ == "__main__":
     folder = "/work/courses/dslab/team20/rbollati/running_env/outputs/poster/nerfacto/2025-10-18_013814/config.yml"
 
     pipeline = Model(folder)
-    rays = pipeline.render_rays()
+    rays = pipeline.create_rays()
+    sampled = pipeline.sample_rays(rays)
     # out_path = "render.png"
     # torchvision.utils.save_image(image.permute(2, 0, 1), out_path)
     print(rays)
