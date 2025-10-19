@@ -1,9 +1,13 @@
-from submodules.nerfstudio.nerfstudio.cameras.cameras import Cameras
-from submodules.nerfstudio.nerfstudio.cameras.rays import RayBundle, RaySamples
-from submodules.nerfstudio.nerfstudio.model_components.ray_samplers import SpacedSampler, UniformSampler
-from submodules.nerfstudio.nerfstudio.field_components.field_heads import FieldHeadNames
+from pathlib import Path, PurePath
+import sys
+NS_ROOT = Path(__file__).parent / "submodules" / "nerfstudio"
+sys.path.insert(0, str(NS_ROOT))
 
-# from submodules.nerfstudio.nerfstudio.field_components.field_heads import FieldHeadNames
+from nerfstudio.cameras.cameras import Cameras
+from nerfstudio.cameras.rays import RayBundle, RaySamples
+from nerfstudio.model_components.ray_samplers import SpacedSampler, UniformSampler
+from nerfstudio.field_components.field_heads import FieldHeadNames
+
 import torchvision
 import warnings
 
@@ -24,7 +28,7 @@ def _patched_load(*args, **kwargs):
 
 
 torch.load = _patched_load
-from submodules.nerfstudio.nerfstudio.utils.eval_utils import eval_setup
+from nerfstudio.utils.eval_utils import eval_setup
 
 
 class Model:
