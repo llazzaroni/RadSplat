@@ -12,7 +12,7 @@ cd /work/courses/dslab/team20/rbollati/running_env
 echo "[set up env] nvidia-smi"
 nvidia-smi
 
-# DATA_DIR=/work/courses/dslab/team20/data/bicycle
+DATA_DIR=/work/courses/dslab/team20/data/bicycle
 
 echo "[set up env] activate conda environment"
 conda init
@@ -27,10 +27,9 @@ python -c "import torch; print('torch:', torch.__version__); print('cuda availab
 echo "[Donwload data] download nerfstudio data"
 # ns-download-data nerfstudio --capture-name=poster
 
-
 echo "[Training] training model"
 ns-train nerfacto \
-  --vis viewer+tensorboard \
+  --vis tensorboard \
   --steps-per-eval-image 100 \
   --logging.steps-per-log 10 \
   --logging.local-writer.enable True \
