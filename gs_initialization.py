@@ -68,8 +68,6 @@ class Model:
 
         if self.pipeline.datamanager.train_dataset:
 
-            scene_box = self.model.scene_box
-
             cameras: Cameras = self.pipeline.datamanager.train_dataset.cameras
 
             i = 0
@@ -83,7 +81,8 @@ class Model:
                 dtype=torch.float32,
             )
 
-            rays = cameras.generate_rays(camera_indices=i, coords = coords, aabb_box=scene_box)
+            rays = cameras.generate_rays(camera_indices=i, coords = coords)
+            rays = self.model.collider.set_nears_and_fars(rays)
 
             return rays
 
