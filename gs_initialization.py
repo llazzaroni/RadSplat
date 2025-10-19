@@ -1,6 +1,8 @@
 from submodules.nerfstudio.nerfstudio.cameras.cameras import Cameras
-from submodules.nerfstudio.nerfstudio.cameras.rays import RayBundle
+from submodules.nerfstudio.nerfstudio.cameras.rays import RayBundle, RaySamples
 from submodules.nerfstudio.nerfstudio.model_components.ray_samplers import SpacedSampler, UniformSampler
+
+from submodules.nerfstudio.nerfstudio.field_components.field_heads import FieldHeadNames
 import torchvision
 import warnings
 
@@ -97,6 +99,26 @@ class Model:
         sampled = sampler.generate_ray_samples(rays, 10)
         print(sampled)
 
+    def evaluate_points(self, ray_samples : RaySamples):
+
+        field_outputs = self.model.field.forward(ray_samples, compute_normals=False)
+
+        weights = ray_samples.get_weights(field_outputs[FieldHeadNames.DENSITY])
+
+        rgb = self.model.renderer_rgb(rgb=field_outputs[FieldHeadNames.RGB], weights=weights)
+        depth = self.model.renderer_depth(weights=weights, ray_samples=ray_samples)
+        expected_depth = self.model.renderer_expected_depth(weights=weights, ray_samples=ray_samples)
+        accumulation = self.model.renderer_accumulation(weights=weights)
+
+        outputs = {
+            "rgb": rgb,
+            "accumulation": accumulation,
+            "depth": depth,
+            "expected_depth": expected_depth,
+        }
+
+        return outputs
+
 
 
 
@@ -106,6 +128,7 @@ if __name__ == "__main__":
     pipeline = Model(folder)
     rays = pipeline.create_rays()
     sampled = pipeline.sample_rays(rays)
+    evaluated = pipeline.evaluate_points(sampled)
     # out_path = "render.png"
     # torchvision.utils.save_image(image.permute(2, 0, 1), out_path)
-    print(rays)
+    print(evaluated)
