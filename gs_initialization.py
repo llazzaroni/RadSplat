@@ -143,8 +143,12 @@ if __name__ == "__main__":
 
     pipeline = Model(folder)
     rays = pipeline.create_rays()
+    print(rays)
     sampled = pipeline.sample_rays(rays)
     evaluated = pipeline.evaluate_points(sampled)
     # out_path = "render.png"
     # torchvision.utils.save_image(image.permute(2, 0, 1), out_path)
+
+    ## TODO:
+    # capire density
     print(evaluated)
