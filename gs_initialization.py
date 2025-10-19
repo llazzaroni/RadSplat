@@ -2,7 +2,7 @@ from submodules.nerfstudio.nerfstudio.cameras.cameras import Cameras
 from submodules.nerfstudio.nerfstudio.cameras.rays import RayBundle, RaySamples
 from submodules.nerfstudio.nerfstudio.model_components.ray_samplers import SpacedSampler, UniformSampler
 
-from submodules.nerfstudio.nerfstudio.field_components.field_heads import FieldHeadNames
+# from submodules.nerfstudio.nerfstudio.field_components.field_heads import FieldHeadNames
 import torchvision
 import warnings
 
@@ -98,14 +98,15 @@ class Model:
         
         sampled = sampler.generate_ray_samples(rays, 10)
         print(sampled)
+        return sampled
 
     def evaluate_points(self, ray_samples : RaySamples):
 
         field_outputs = self.model.field.forward(ray_samples, compute_normals=False)
 
-        weights = ray_samples.get_weights(field_outputs[FieldHeadNames.DENSITY])
+        weights = ray_samples.get_weights(field_outputs["density"])
 
-        rgb = self.model.renderer_rgb(rgb=field_outputs[FieldHeadNames.RGB], weights=weights)
+        rgb = self.model.renderer_rgb(rgb=field_outputs["rgb"], weights=weights)
         depth = self.model.renderer_depth(weights=weights, ray_samples=ray_samples)
         expected_depth = self.model.renderer_expected_depth(weights=weights, ray_samples=ray_samples)
         accumulation = self.model.renderer_accumulation(weights=weights)
