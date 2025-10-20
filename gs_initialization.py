@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from pathlib import Path, PurePath
 import sys
 NS_ROOT = Path(__file__).parent / "submodules" / "nerfstudio"
@@ -9,12 +10,35 @@ from nerfstudio.model_components.ray_samplers import SpacedSampler, UniformSampl
 from nerfstudio.field_components.field_heads import FieldHeadNames
 
 import torchvision
-import warnings
+=======
+from pathlib import Path
+import numpy as np
+import torch
+import torchvision
+import logging
 
+# Allow weights loading
+_orig_load = torch.load
+def _patched_load(*args, **kwargs):
+    kwargs.setdefault("weights_only", False)
+    return _orig_load(*args, **kwargs)
+torch.load = _patched_load
+
+# Load nerfstudio fuctions
+from submodules.nerfstudio.nerfstudio.utils.eval_utils import eval_setup
+from submodules.nerfstudio.nerfstudio.cameras.cameras import Cameras
+from submodules.nerfstudio.nerfstudio.cameras.rays import RayBundle, RaySamples
+from submodules.nerfstudio.nerfstudio.model_components.ray_samplers import SpacedSampler, UniformSampler
+from submodules.nerfstudio.nerfstudio.field_components.field_heads import FieldHeadNames
+
+# Silent warningng regarding deprecation
+>>>>>>> dd7bd7e (code refactoring)
+import warnings
 warnings.filterwarnings(
     "ignore",
     message="Using a non-tuple sequence for multidimensional indexing is deprecated",
 )
+<<<<<<< HEAD
 from pathlib import Path
 import numpy as np
 import torch
@@ -30,89 +54,123 @@ def _patched_load(*args, **kwargs):
 torch.load = _patched_load
 from nerfstudio.utils.eval_utils import eval_setup
 
+=======
+>>>>>>> dd7bd7e (code refactoring)
 
 class Model:
 
-    def __init__(self, checkpoint_folder: str):
+    def __init__(self, config_file_path: str):
+        """
+        This class is an interface to the nerfacto model from nerfstudio
+        
+        :Param config_file_path -> (str) path to the config file
+        """
 
-        print("###################################### initi model")
+        logging.info("Model interface initialization")
 
-        self.checkpoint_folder = Path(checkpoint_folder)
+        self.config_file_path = Path(config_file_path)
+
+        # load model and pipeline
         self.pipeline, self.model = self._load_model()
-        self._load_model()
+        # set device based on configs (GPU / CPU)
         self.device = next(self.model.parameters()).device
 
-        print("###################################### model loaded")
+        logging.info(f"Model interface initialized succesfully - device: {self.device}")
 
         pass
 
     def _load_model(self):
-        _, pipeline, _, _ = eval_setup(self.checkpoint_folder, test_mode="test")
+        """
+        This function load the model from the checkpoint and load it into
+        the class instance
+        """
+        _, pipeline, _, _ = eval_setup(self.config_file_path, test_mode="test")
         return pipeline, pipeline.model
 
     def render_camera(self, camera_index: int):
         """
-        This function is used to render an entire image from the traini dataset
+        Render an image from the traini dataset
 
         :Param camera_index -> (int) the index of the camera from the train set to render
         """
 
-        print("###################################### rendering image")
-        if self.pipeline.datamanager.train_dataset:
-            camera = self.pipeline.datamanager.train_dataset.cameras[0]
+        # Check train_set is not none 
+        assert self.pipeline.datamanager.train_dataset
 
-            print("###################################### camera")
-            print(camera)
-            print("###################################### run model")
+        # Get camera from train set data
+        camera = self.pipeline.datamanager.train_dataset.cameras[camera_index]
 
-            outputs = self.model.get_outputs_for_camera(camera)
-            image = outputs["rgb"]
+        print(camera)
 
-            return image
+        # Run model on specific camera
+        logging.info(f"Generating output for camera {camera_index}")
+        outputs = self.model.get_outputs_for_camera(camera)
+        image = outputs["rgb"]
 
-        return None
+        logging.info(f"Image generated")
 
-    def create_rays(self):
+        return image
 
-        if self.pipeline.datamanager.train_dataset:
+    def create_rays(self, camera_index : int, coordinates : torch.Tensor):
+        """
+        Generate rays for specific pixel coordinates and camera index
 
-            cameras: Cameras = self.pipeline.datamanager.train_dataset.cameras
-            cameras = cameras.to(device=self.device)
+        :Param camera_index -> (int) index of the camera to use from the train set
+        :Param coords -> (torch.Tensor) a tensor shape (n, 2) containing the coordinates of the n pixels to render
 
-            i = 0
+        :Return RayBundle
+        """
 
-            coords = torch.tensor(
-                [
-                    [10, 20],  # x, y
-                    [100, 50],
-                    [200, 120],
-                ],
-                dtype=torch.float32,
-                device=self.device
-            )
+        assert self.pipeline.datamanager.train_dataset
 
-            rays = cameras.generate_rays(camera_indices=i, coords = coords)
-            rays = self.model.collider.set_nears_and_fars(rays)
+        # get cameras from training set
+        cameras: Cameras = self.pipeline.datamanager.train_dataset.cameras
+        # make sure the cameras are on the same device
+        cameras = cameras.to(device=self.device)
 
-            return rays.to(self.device)
 
-    def sample_rays(self, rays : RayBundle):
+        # generate rays
+        rays = cameras.generate_rays(camera_indices=camera_index, coords = coordinates)
+        # use the model collider to assign near / fars values
+        rays = self.model.collider.set_nears_and_fars(rays)
+
+        return rays.to(self.device)
+
+    def sample_rays(self, rays : RayBundle, num_samples : int):
+        """
+        Sample points along the given rays, The sampler used is a SpacedSampler
+
+        :Param rays -> (RayBundle) The rays to sample
+        :Param num_sample -> (int) Number of sample to generate per ray
+
+        :Return RaySamples
+        """
 
         rays = rays.to(self.device)
+
         sampler = SpacedSampler(
                     spacing_fn= lambda x : x,
                     spacing_fn_inv= lambda x : x,
                     num_samples= 10
                 ) 
         
-        sampled = sampler.generate_ray_samples(rays, 10)
+        sampled = sampler.generate_ray_samples(rays, num_samples)
         print(sampled)
         return sampled.to(self.device)
 
     def evaluate_points(self, ray_samples : RaySamples):
+        """
+        Evaluate a RaySamples and returns the value of the pixel and the single points
+        evaluation
+
+        :Param ray_samples -> (RaySamples) samples along the ray to evaluate
+
+        :Return field_outputs, outputs
+        """
 
         ray_samples = ray_samples.to(self.device)
 
+        # Additional step to make sure tensors stay on self.device
         with torch.no_grad():
 
             field_outputs = self.model.field.forward(ray_samples, compute_normals=False)
@@ -133,7 +191,7 @@ class Model:
             "expected_depth": expected_depth,
         }
 
-        return outputs
+        return field_outputs, outputs
 
 
 
@@ -141,7 +199,9 @@ class Model:
 if __name__ == "__main__":
     folder = "/work/courses/dslab/team20/rbollati/running_env/outputs/poster/nerfacto/2025-10-18_013814/config.yml"
 
+    
     pipeline = Model(folder)
+<<<<<<< HEAD
     rays = pipeline.create_rays()
     print(rays)
     sampled = pipeline.sample_rays(rays)
@@ -152,3 +212,23 @@ if __name__ == "__main__":
     ## TODO:
     # capire density
     print(evaluated)
+=======
+
+    coords = torch.tensor(
+        [
+            [10, 20],  # x, y
+            [100, 50],
+            [200, 120],
+        ],
+        dtype=torch.float32,
+        device=pipeline.device
+    )
+
+    rays = pipeline.create_rays(0, coords)
+
+    sampled = pipeline.sample_rays(rays, 10)
+    points, pixels_prediction = pipeline.evaluate_points(sampled)
+
+    print(points)
+
+>>>>>>> dd7bd7e (code refactoring)
