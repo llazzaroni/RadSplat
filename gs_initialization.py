@@ -1,5 +1,17 @@
-from pathlib import Path, PurePath
+import torchvision
+import warnings
+import logging
 import sys
+import numpy as np
+import torch
+
+_orig_load = torch.load
+def _patched_load(*args, **kwargs):
+    kwargs.setdefault("weights_only", False)
+    return _orig_load(*args, **kwargs)
+torch.load = _patched_load
+
+from pathlib import Path, PurePath
 NS_ROOT = Path(__file__).parent / "submodules" / "nerfstudio"
 sys.path.insert(0, str(NS_ROOT))
 
@@ -7,29 +19,12 @@ from nerfstudio.cameras.cameras import Cameras
 from nerfstudio.cameras.rays import RayBundle, RaySamples
 from nerfstudio.model_components.ray_samplers import SpacedSampler, UniformSampler
 from nerfstudio.field_components.field_heads import FieldHeadNames
-
-import torchvision
-import warnings
-import logging
+from nerfstudio.utils.eval_utils import eval_setup
 
 warnings.filterwarnings(
     "ignore",
     message="Using a non-tuple sequence for multidimensional indexing is deprecated",
 )
-from pathlib import Path
-import numpy as np
-import torch
-
-_orig_load = torch.load
-
-
-def _patched_load(*args, **kwargs):
-    kwargs.setdefault("weights_only", False)
-    return _orig_load(*args, **kwargs)
-
-
-torch.load = _patched_load
-from nerfstudio.utils.eval_utils import eval_setup
 
 class Model:
 
