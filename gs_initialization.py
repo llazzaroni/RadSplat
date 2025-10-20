@@ -2,6 +2,7 @@ from pathlib import Path
 import torchvision
 import numpy as np
 import sys
+import logging
 
 ## import torch and allow LoadWeights only
 import torch
