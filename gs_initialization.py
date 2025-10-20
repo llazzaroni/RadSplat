@@ -169,6 +169,7 @@ if __name__ == "__main__":
 
     
     pipeline = Model(folder)
+
     coords = torch.tensor(
         [
             [10, 20],  # x, y
