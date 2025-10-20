@@ -1,24 +1,28 @@
-from pathlib import Path
-import numpy as np
-import torch
+from pathlib import Path 
 import torchvision
-import logging
+import numpy as np
+import sys
 
-# Allow weights loading
-_orig_load = torch.load
+## import torch and allow LoadWeights only
+import torch
 def _patched_load(*args, **kwargs):
+
     kwargs.setdefault("weights_only", False)
+
     return _orig_load(*args, **kwargs)
 torch.load = _patched_load
 
-# Load nerfstudio fuctions
-from submodules.nerfstudio.nerfstudio.utils.eval_utils import eval_setup
-from submodules.nerfstudio.nerfstudio.cameras.cameras import Cameras
-from submodules.nerfstudio.nerfstudio.cameras.rays import RayBundle, RaySamples
-from submodules.nerfstudio.nerfstudio.model_components.ray_samplers import SpacedSampler, UniformSampler
-from submodules.nerfstudio.nerfstudio.field_components.field_heads import FieldHeadNames
+# load nerfstudio path
+NS_ROOT = Path(__file__).parent / "submodules" / "nerfstudio"
+sys.path.insert(0, str(NS_ROOT))
 
-# Silent warningng regarding deprecation
+from nerfstudio.cameras.cameras import Cameras
+from nerfstudio.cameras.rays import RayBundle, RaySamples
+from nerfstudio.model_components.ray_samplers import SpacedSampler, UniformSampler
+from nerfstudio.field_components.field_heads import FieldHeadNames
+from nerfstudio.utils.eval_utils import eval_setup
+
+# silent deprecation warnings
 import warnings
 warnings.filterwarnings(
     "ignore",
