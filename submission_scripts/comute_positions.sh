@@ -19,7 +19,7 @@ source /work/courses/dslab/team20/miniconda3/etc/profile.d/conda.sh
 conda activate ns50 
 
 echo "[set up env] CUDA sanity check"
-python -c "import torch; print('torch:', torch._version_); print('cuda available:', torch.cuda.is_available()); print('cuda version:', torch.version.cuda)"
+python -c "import torch; print('torch:', torch.__version__); print('cuda available:', torch.cuda.is_available()); print('cuda version:', torch.version.cuda)"
 
 
 echo "[Starting] script"
