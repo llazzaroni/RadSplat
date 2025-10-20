@@ -75,6 +75,12 @@ def main() -> None:
     field_outputs = model.field.forward(ray_samples, compute_normals=model.config.predict_normals)
     weights = ray_samples.get_weights(field_outputs[FieldHeadNames.DENSITY])
 
+    rgb = model.renderer_rgb(rgb=field_outputs[FieldHeadNames.RGB], weights=weights)
+
+    depth = model.renderer_depth(weights=weights, ray_samples=ray_samples)
+    expected_depth = model.renderer_expected_depth(weights=weights, ray_samples=ray_samples)
+    accumulation = model.renderer_accumulation(weights=weights)
+
     print("Passed the ray bundle through the model")
 
     # Compute the final positions according to the paper
@@ -92,6 +98,17 @@ def main() -> None:
 
     radsplat_positions = positions[torch.arange(num_rays, device=positions.device), last_idx, :]
     torch.save(radsplat_positions, "positions.pt")
+
+    output = {
+            'position' : radsplat_positions,
+            "rgb": rgb,
+            "accumulation": accumulation,
+            "depth": depth,
+            "expected_depth": expected_depth,
+            }
+    
+
+    torch.save(radsplat_positions, "complete_output.pt")
 
     print(radsplat_positions)
 
