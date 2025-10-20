@@ -1,16 +1,3 @@
-<<<<<<< HEAD
-from pathlib import Path, PurePath
-import sys
-NS_ROOT = Path(__file__).parent / "submodules" / "nerfstudio"
-sys.path.insert(0, str(NS_ROOT))
-
-from nerfstudio.cameras.cameras import Cameras
-from nerfstudio.cameras.rays import RayBundle, RaySamples
-from nerfstudio.model_components.ray_samplers import SpacedSampler, UniformSampler
-from nerfstudio.field_components.field_heads import FieldHeadNames
-
-import torchvision
-=======
 from pathlib import Path
 import numpy as np
 import torch
@@ -32,30 +19,11 @@ from submodules.nerfstudio.nerfstudio.model_components.ray_samplers import Space
 from submodules.nerfstudio.nerfstudio.field_components.field_heads import FieldHeadNames
 
 # Silent warningng regarding deprecation
->>>>>>> dd7bd7e (code refactoring)
 import warnings
 warnings.filterwarnings(
     "ignore",
     message="Using a non-tuple sequence for multidimensional indexing is deprecated",
 )
-<<<<<<< HEAD
-from pathlib import Path
-import numpy as np
-import torch
-
-_orig_load = torch.load
-
-
-def _patched_load(*args, **kwargs):
-    kwargs.setdefault("weights_only", False)
-    return _orig_load(*args, **kwargs)
-
-
-torch.load = _patched_load
-from nerfstudio.utils.eval_utils import eval_setup
-
-=======
->>>>>>> dd7bd7e (code refactoring)
 
 class Model:
 
@@ -201,19 +169,6 @@ if __name__ == "__main__":
 
     
     pipeline = Model(folder)
-<<<<<<< HEAD
-    rays = pipeline.create_rays()
-    print(rays)
-    sampled = pipeline.sample_rays(rays)
-    evaluated = pipeline.evaluate_points(sampled)
-    # out_path = "render.png"
-    # torchvision.utils.save_image(image.permute(2, 0, 1), out_path)
-
-    ## TODO:
-    # capire density
-    print(evaluated)
-=======
-
     coords = torch.tensor(
         [
             [10, 20],  # x, y
@@ -230,5 +185,3 @@ if __name__ == "__main__":
     points, pixels_prediction = pipeline.evaluate_points(sampled)
 
     print(points)
-
->>>>>>> dd7bd7e (code refactoring)
