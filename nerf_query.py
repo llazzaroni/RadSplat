@@ -91,6 +91,7 @@ def main() -> None:
     last_idx = (count - 1).clamp(min=0)
 
     radsplat_positions = positions[torch.arange(num_rays, device=positions.device), last_idx, :]
+    torch.save(radsplat_positions, "positions.pt")
 
     print(radsplat_positions)
 
