@@ -23,4 +23,4 @@ python -c "import torch; print('torch:', torch._version_); print('cuda available
 
 
 echo "[Starting] script"
-python ~/RadSplat/nerf_query.py
+python ~/ds-lab/RadSplat/nerf_query.py

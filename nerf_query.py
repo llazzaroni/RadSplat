@@ -3,7 +3,7 @@ import torch
 import numpy as np
 
 import sys
-NS_ROOT = Path(_file_).parent / "submodules" / "nerfstudio"
+NS_ROOT = Path(__file__).parent / "submodules" / "nerfstudio"
 sys.path.insert(0, str(NS_ROOT))
 
 from nerfstudio.utils.eval_utils import eval_setup
@@ -43,7 +43,7 @@ def main() -> None:
     # Randomly sample
     cams = dm.train_dataset.cameras.to(device)
     num_imgs = len(cams)
-    num_rays = 5
+    num_rays = 100
 
     img_idx = torch.randint(low=0, high=num_imgs, size=(num_rays,), device=device)
 
@@ -94,7 +94,5 @@ def main() -> None:
 
     print(radsplat_positions)
 
-
-
-if _name_ == "_main_":
+if __name__ == "__main__":
     main()
