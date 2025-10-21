@@ -26,3 +26,5 @@ class Initializer:
         initial_gaussians_position = positions[torch.arange(len(positions), device=positions.device), last_idx, :]
 
         return initial_gaussians_position
+
+
