@@ -210,3 +210,4 @@ __marimo__/
 .DS_store
 
 submission_scripts/logs/
+temp.py
