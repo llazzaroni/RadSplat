@@ -107,7 +107,7 @@ class Nerfacto:
 
         return rays.to(self.device)
 
-    def sample_points(self, rays : RayBundle, num_samples : int):
+    def sample_points(self, rays : RayBundle):
         """
         Sample points along the given rays, The sampler used is a SpacedSampler
 
@@ -117,17 +117,19 @@ class Nerfacto:
         :Return RaySamples
         """
 
-        rays = rays.to(self.device)
+        # rays = rays.to(self.device)
+        #
+        # sampler = SpacedSampler(
+        #             spacing_fn= lambda x : x,
+        #             spacing_fn_inv= lambda x : x,
+        #             num_samples= 10
+        #         ) 
+        # 
+        # sampled = sampler.generate_ray_samples(rays, num_samples)
 
-        sampler = SpacedSampler(
-                    spacing_fn= lambda x : x,
-                    spacing_fn_inv= lambda x : x,
-                    num_samples= 10
-                ) 
-        
-        sampled = sampler.generate_ray_samples(rays, num_samples)
-        print(sampled)
-        return sampled.to(self.device)
+        ray_samples, weights_list, ray_samples_list = self.model.proposal_sampler(rays, density_fns=self.model.density_fns)
+
+        return ray_samples.to(self.device)
 
     def evaluate_points(self, ray_samples : RaySamples):
         """

@@ -108,7 +108,7 @@ def main() -> None:
             }
     
 
-    torch.save(radsplat_positions, "complete_output.pt")
+    torch.save(output, "complete_output.pt")
 
     print(radsplat_positions)
 
