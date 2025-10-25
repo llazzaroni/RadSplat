@@ -1,17 +1,22 @@
+from os import replace
 from pathlib import Path
+import numpy as np
 import torch
+import cv2
 
 import sys
+
 NS_ROOT = Path(__file__).parent / "submodules" / "nerfstudio"
 sys.path.insert(0, str(NS_ROOT))
 
 from nerfstudio.data.datamanagers.base_datamanager import DataManager
 
-def random_sampler(data_manager : DataManager, n : int,  device) -> torch.Tensor:
+
+def random_sampler(data_manager: DataManager, n: int, device) -> torch.Tensor:
     """
     Sample n rays from a set of given cameras
 
-    :Param data_manager -> (DataManager) the data manager containing the target cameras 
+    :Param data_manager -> (DataManager) the data manager containing the target cameras
     :Param n -> (int) number of rays to samplePipeline
 
     :Retunr (torch.Tensor) a tesor of shape (n, 3) containing (camera idx, point y, point x)
@@ -41,3 +46,80 @@ def random_sampler(data_manager : DataManager, n : int,  device) -> torch.Tensor
 
     return ray_indices
 
+
+# def sobel_edge_detector_sampler(data_manager : DataManager, n : int,  device) -> torch.Tensor:
+def sobel_edge_detector_sampler(
+    data_manager: DataManager, n: int, device
+) -> torch.Tensor:
+
+    camera_shapes = {}
+
+    cameras = data_manager.train_dataset.cameras.to(device)
+
+    # get images sizes
+    H = cameras.height.squeeze(-1).to(device)
+    W = cameras.width.squeeze(-1).to(device)
+
+    # get image paths
+    img_paths: list[Path] = data_manager.dataparser_outputs.image_filenames
+    # determine how many points to sample from each image
+    img_weights = np.zeros(len(img_paths))
+    pixels_weights = []
+
+    for idx, img_path in enumerate(img_paths):
+
+        img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+
+        # Apply Sobel operator
+        sobelx = cv2.Sobel(img, cv2.CV_64F, 1, 0, ksize=3)  # Horizontal edges
+        sobely = cv2.Sobel(img, cv2.CV_64F, 0, 1, ksize=3)  # Vertical edges
+
+        # Compute gradient magnitude
+        gradient_magnitude = cv2.magnitude(sobelx, sobely)
+
+        # Convert to uint8
+        gradient_magnitude = cv2.convertScaleAbs(gradient_magnitude)
+
+        # Normalize
+        gradient_magnitude = gradient_magnitude / 255
+
+        # smooth results
+        smoothed = cv2.GaussianBlur(gradient_magnitude, (5, 5), 0).ravel()
+
+        img_weights[idx] = smoothed.sum()
+        pixels_weights.append(smoothed)
+
+    x = []
+    y = []
+    camera_idx = []
+
+    img_weights = img_weights / img_weights.sum()
+    samples_per_image = img_weights * n
+
+    indeces = {(H[0], W[0]): [(y, x) for y in range(H[0]) for x in range(W[0])]}
+
+    for ind, weights in enumerate(pixels_weights):
+        
+        img_shape = (cameras[ind].height, cameras[ind].width)
+        if img_shape in indeces:
+            img_indeces = indeces[img_shape]
+        else:
+            img_indeces = [(y, x) for y in range(img_shape[0]) for x in range(img_shape[1])]
+            indeces[img_shape] = img_indeces
+
+
+        sampled_indeces = np.random.choice(
+            len(img_indeces),
+            size = samples_per_image[ind],
+            p = weights,
+            replace = False
+        )
+
+        for s_ind in sampled_indeces:
+            x.append(s_ind[1])
+            y.append(s_ind[0])
+            camera_idx.append(ind)
+
+    ray_indices = torch.stack([torch.tensor(camera_idx), torch.tensor(y), torch.tensor(x)], dim=-1).long()
+
+    return ray_indices
