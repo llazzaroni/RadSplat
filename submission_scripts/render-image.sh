@@ -11,10 +11,13 @@
 # image
 ###############################################################
 
-conda init
-conda activate ns50 
+set +u
+source /work/courses/dslab/team20/miniconda3/etc/profile.d/conda.sh
+conda activate gs50 
+set -u
 
 echo "##################### [Job started] #####################"
 cd /work/courses/dslab/team20/rbollati/running_env
 
-python ~/ds-lab/RadSplat/gs_initialization.py 
+# python ~/ds-lab/RadSplat/gs_initialization.py 
+python ~/ds-lab/RadSplat/test.py 

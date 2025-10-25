@@ -61,7 +61,7 @@ def sobel_edge_detector_sampler(
     W = cameras.width.squeeze(-1).to(device)
 
     # get image paths
-    img_paths: list[Path] = data_manager.dataparser_outputs.image_filenames
+    img_paths: list[Path] = data_manager.train_dataparser_outputs.image_filenames
     # determine how many points to sample from each image
     img_weights = np.zeros(len(img_paths))
     pixels_weights = []
@@ -87,6 +87,7 @@ def sobel_edge_detector_sampler(
         smoothed = cv2.GaussianBlur(gradient_magnitude, (5, 5), 0).ravel()
 
         img_weights[idx] = smoothed.sum()
+        smoothed = smoothed / smoothed.sum()
         pixels_weights.append(smoothed)
 
     x = []
@@ -94,7 +95,7 @@ def sobel_edge_detector_sampler(
     camera_idx = []
 
     img_weights = img_weights / img_weights.sum()
-    samples_per_image = img_weights * n
+    samples_per_image = np.floor(img_weights * n)
 
     indeces = {(H[0], W[0]): [(y, x) for y in range(H[0]) for x in range(W[0])]}
 
@@ -110,14 +111,16 @@ def sobel_edge_detector_sampler(
 
         sampled_indeces = np.random.choice(
             len(img_indeces),
-            size = samples_per_image[ind],
+            size = int(samples_per_image[ind]),
             p = weights,
             replace = False
         )
 
+        print(sampled_indeces)
+
         for s_ind in sampled_indeces:
-            x.append(s_ind[1])
-            y.append(s_ind[0])
+            x.append(img_indeces[s_ind][1])
+            y.append(img_indeces[s_ind][0])
             camera_idx.append(ind)
 
     ray_indices = torch.stack([torch.tensor(camera_idx), torch.tensor(y), torch.tensor(x)], dim=-1).long()
