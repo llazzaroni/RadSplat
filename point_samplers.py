@@ -52,34 +52,18 @@ def sobel_edge_detector_sampler(
     data_manager: DataManager, n: int, device
 ) -> torch.Tensor:
 
-    camera_shapes = {}
+    dataset = data_manager.train_dataset
 
-    cameras = data_manager.train_dataset.cameras.to(device)
-
-    # get images sizes
-    H = cameras.height.squeeze(-1).to(device)
-    W = cameras.width.squeeze(-1).to(device)
-
-    # get image paths
-    img_paths: list[Path] = data_manager.train_dataparser_outputs.image_filenames
     # determine how many points to sample from each image
-    img_weights = np.zeros(len(img_paths))
+    img_weights = np.zeros(len(dataset))
+    imgs_shapes = []
     pixels_weights = []
 
-    indeces = {}
+    for idx in range(len(dataset)):
 
-    for idx, img_path in enumerate(img_paths):
-
-
-        img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+        img = dataset.get_numpy_image(idx)
         H, W = img.shape
-
-        img_shape = (H, W)
-        if img_shape in indeces:
-            img_indeces = indeces[img_shape]
-        else:
-            img_indeces = [(x, y) for y in range(H) for x in range(W)]
-            indeces[img_shape] = img_indeces
+        imgs_shapes.append((H,W))
 
         # Apply Sobel operator
         sobelx = cv2.Sobel(img, cv2.CV_64F, 1, 0, ksize=3)  # Horizontal edges
@@ -108,19 +92,10 @@ def sobel_edge_detector_sampler(
     img_weights = img_weights / img_weights.sum()
     samples_per_image = np.floor(img_weights * n)
 
-
     for ind, weights in enumerate(pixels_weights):
-        
 
-        img_shape = (cameras[ind].height, cameras[ind].width)
-        img_indeces = indeces[img_shape]
-
-        # img_shape = (cameras[ind].height, cameras[ind].width)
-        # if img_shape in indeces:
-        #     img_indeces = 
-        # else:
-        #     img_indeces = [(x, y) for y in range(img_shape[0]) for x in range(img_shape[1])]
-        #     indeces[img_shape] = img_indeces
+        H,W = imgs_shapes[ind]
+        img_indeces = [(x,y) for y in range(H-1, -1, -1) for x in range(W)]
 
         sampled_indeces = np.random.choice(
             len(img_indeces),
@@ -133,7 +108,7 @@ def sobel_edge_detector_sampler(
         for s_ind in sampled_indeces:
             x.append(img_indeces[s_ind][0])
             y.append(img_indeces[s_ind][1])
-            camera_idx.append(ind)
+        camera_idx += [ind] * len(sampled_indeces)
 
     ray_indices = torch.stack([torch.tensor(camera_idx), torch.tensor(y), torch.tensor(x)], dim=-1).long()
 
