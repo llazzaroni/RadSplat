@@ -3,7 +3,7 @@ import math
 import torch
 
 from nerf_models import Nerfacto
-from point_samplers import random_sampler
+from point_samplers import sobel_edge_detector_sampler
 from gs_initializer import Initializer
 
 warnings.filterwarnings(
@@ -24,7 +24,7 @@ if __name__ == "__main__":
     model = Nerfacto(folder)
 
     # saple points
-    coords = random_sampler(model.pipeline.datamanager, N_RAYS, model.device)
+    coords = sobel_edge_detector_sampler(model.pipeline.datamanager, N_RAYS, model.device)
 
     xyzrgb_chunks = []
     for b in range(n_batches):
@@ -63,4 +63,4 @@ if __name__ == "__main__":
     xyzrgb = torch.cat(xyzrgb_chunks, dim=0)
 
     print('########### saving initial positions')
-    torch.save(xyzrgb, 'big_sample.pt')
+    torch.save(xyzrgb, 'edge_driven_sampling.pt')

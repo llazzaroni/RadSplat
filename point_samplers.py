@@ -62,8 +62,11 @@ def sobel_edge_detector_sampler(
     for idx in range(len(dataset)):
 
         img = dataset.get_numpy_image(idx)
-        H, W = img.shape
+        H, W, _ = img.shape
         imgs_shapes.append((H,W))
+
+        # convert to gray scale
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
         # Apply Sobel operator
         sobelx = cv2.Sobel(img, cv2.CV_64F, 1, 0, ksize=3)  # Horizontal edges
@@ -95,7 +98,12 @@ def sobel_edge_detector_sampler(
     for ind, weights in enumerate(pixels_weights):
 
         H,W = imgs_shapes[ind]
+
+        print(H)
+        print(W)
         img_indeces = [(x,y) for y in range(H-1, -1, -1) for x in range(W)]
+        print(len(img_indeces))
+        print(len(weights))
 
         sampled_indeces = np.random.choice(
             len(img_indeces),
