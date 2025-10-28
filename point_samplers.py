@@ -66,9 +66,20 @@ def sobel_edge_detector_sampler(
     img_weights = np.zeros(len(img_paths))
     pixels_weights = []
 
+    indeces = {}
+
     for idx, img_path in enumerate(img_paths):
 
+
         img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+        H, W = img.shape
+
+        img_shape = (H, W)
+        if img_shape in indeces:
+            img_indeces = indeces[img_shape]
+        else:
+            img_indeces = [(x, y) for y in range(H) for x in range(W)]
+            indeces[img_shape] = img_indeces
 
         # Apply Sobel operator
         sobelx = cv2.Sobel(img, cv2.CV_64F, 1, 0, ksize=3)  # Horizontal edges
@@ -97,17 +108,19 @@ def sobel_edge_detector_sampler(
     img_weights = img_weights / img_weights.sum()
     samples_per_image = np.floor(img_weights * n)
 
-    indeces = {(H[0], W[0]): [(y, x) for y in range(H[0]) for x in range(W[0])]}
 
     for ind, weights in enumerate(pixels_weights):
         
-        img_shape = (cameras[ind].height, cameras[ind].width)
-        if img_shape in indeces:
-            img_indeces = indeces[img_shape]
-        else:
-            img_indeces = [(y, x) for y in range(img_shape[0]) for x in range(img_shape[1])]
-            indeces[img_shape] = img_indeces
 
+        img_shape = (cameras[ind].height, cameras[ind].width)
+        img_indeces = indeces[img_shape]
+
+        # img_shape = (cameras[ind].height, cameras[ind].width)
+        # if img_shape in indeces:
+        #     img_indeces = 
+        # else:
+        #     img_indeces = [(x, y) for y in range(img_shape[0]) for x in range(img_shape[1])]
+        #     indeces[img_shape] = img_indeces
 
         sampled_indeces = np.random.choice(
             len(img_indeces),
@@ -116,11 +129,10 @@ def sobel_edge_detector_sampler(
             replace = False
         )
 
-        print(sampled_indeces)
 
         for s_ind in sampled_indeces:
-            x.append(img_indeces[s_ind][1])
-            y.append(img_indeces[s_ind][0])
+            x.append(img_indeces[s_ind][0])
+            y.append(img_indeces[s_ind][1])
             camera_idx.append(ind)
 
     ray_indices = torch.stack([torch.tensor(camera_idx), torch.tensor(y), torch.tensor(x)], dim=-1).long()
