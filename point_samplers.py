@@ -76,17 +76,17 @@ def sobel_edge_detector_sampler(
         gradient_magnitude = cv2.magnitude(sobelx, sobely)
 
         # Convert to uint8
-        gradient_magnitude = cv2.convertScaleAbs(gradient_magnitude)
+        gradient_magnitude = cv2.convertScaleAbs(gradient_magnitude).ravel()
 
         # Normalize
         gradient_magnitude = gradient_magnitude / 255
 
         # smooth results
-        smoothed = cv2.GaussianBlur(gradient_magnitude, (5, 5), 0).ravel()
+        # smoothed = cv2.GaussianBlur(gradient_magnitude, (5, 5), 0).ravel()
 
-        img_weights[idx] = smoothed.sum()
-        smoothed = smoothed / smoothed.sum()
-        pixels_weights.append(smoothed)
+        img_weights[idx] = gradient_magnitude.sum()
+        normalized = gradient_magnitude / gradient_magnitude.sum()
+        pixels_weights.append(normalized)
 
     x = []
     y = []

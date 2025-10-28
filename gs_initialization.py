@@ -63,4 +63,4 @@ if __name__ == "__main__":
     xyzrgb = torch.cat(xyzrgb_chunks, dim=0)
 
     print('########### saving initial positions')
-    torch.save(xyzrgb, 'edge_driven_sampling.pt')
+    torch.save(xyzrgb, 'edge_driven_sampling_no_smoothing.pt')

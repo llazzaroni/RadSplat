@@ -36,22 +36,12 @@ print("fused_ssim import OK")
 PY
 
 SCENE_DIR="/work/courses/dslab/team20/data/poster"
-RESULT_DIR="/work/courses/dslab/team20/results_gsplat_poster/edge_sampler"
+RESULT_DIR="/work/courses/dslab/team20/results_gsplat_poster/edge_sampler_no_smoothing"
 RENDER_TRAJ_PATH="ellipse"
 DATA_FACTOR=4
 
 REPO_DIR="/home/rbollati/ds-lab/RadSplat"
 cd "$REPO_DIR"
-
-
-echo "##################### [creating checkpoint] #####################"
-srun python gs_splat_ckp_0.py default \
-  --eval_steps -1 \
-  --disable_viewer \
-  --data_factor "$DATA_FACTOR" \
-  --render_traj_path "$RENDER_TRAJ_PATH" \
-  --data_dir "$SCENE_DIR/" \
-  --result_dir "$RESULT_DIR/" \
 
 echo "##################### [Checkpoint created] #####################"
 srun python gs_splat_ckp_0.py default \
@@ -61,4 +51,4 @@ srun python gs_splat_ckp_0.py default \
   --render_traj_path "$RENDER_TRAJ_PATH" \
   --data_dir "$SCENE_DIR/" \
   --result_dir "$RESULT_DIR/" \
-  --ckpt /work/courses/dslab/team20/results_gsplat_poster/edge_sampler/ckpts/ckpt_0_rank0.pt
+  --ckpt /work/courses/dslab/team20/results_gsplat_poster/edge_sampler_no_smoothing/ckpts/ckpt_0_rank0.pt
