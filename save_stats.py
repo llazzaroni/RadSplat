@@ -117,7 +117,7 @@ class Config:
         default_factory=DefaultStrategy
     )
     # Use packed mode for rasterization, this leads to less memory usage but slightly slower.
-    packed: bool = False
+    packed: bool = True
     # Use sparse gradients for optimization. (experimental)
     sparse_grad: bool = False
     # Use visible adam from Taming 3DGS. (experimental)
@@ -268,9 +268,7 @@ def create_splats_with_optimizers(
     world_rank: int = 0,
     world_size: int = 1,
 ) -> Tuple[torch.nn.ParameterDict, Dict[str, torch.optim.Optimizer]]:
-
     '''
-
     if init_type == "sfm":
         points = torch.from_numpy(parser.points).float()
         rgbs = torch.from_numpy(parser.points_rgb / 255.0).float()
@@ -279,9 +277,8 @@ def create_splats_with_optimizers(
         rgbs = torch.rand((init_num_pts, 3))
     else:
         raise ValueError("Please specify a correct init_type: sfm or random")
-
-    
     '''
+    num_points = len(torch.from_numpy(parser.points).float())
     xyzrgb = payload["xyzrgb"].detach().cpu().numpy()
     C_nerf_all = payload["camera_to_worlds"][:, :3, 3].detach().cpu().numpy()
 
@@ -322,13 +319,13 @@ def create_splats_with_optimizers(
     xyz_aligned = (s * (R @ xyz.T).T + t)
     xyzrgb_aligned = np.concatenate([xyz_aligned, xyzrgb[:, 3:6]], axis=1)
 
-    points = torch.from_numpy(xyzrgb_aligned[:, :3]).float().to(device)
-    rgbs   = torch.from_numpy(xyzrgb_aligned[:, 3:6]).float().to(device)
+    points = torch.from_numpy(xyzrgb_aligned[:num_points, :3]).float().to(device)
+    rgbs   = torch.from_numpy(xyzrgb_aligned[:num_points, 3:6]).float().to(device)
     if rgbs.max() > 1.0:
         rgbs = rgbs / 255.0
 
     # Initialize the GS size to be the average dist of the 3 nearest neighbors
-    dist2_avg = (knn(points, 4)[:, 1:] ** 2).mean(dim=-1)  # [N,]
+    dist2_avg = (knn(points, 2)[:, 1:] ** 2).mean(dim=-1)  # [N,]
     dist_avg = torch.sqrt(dist2_avg)
     scales = torch.log(dist_avg * init_scale).unsqueeze(-1).repeat(1, 3)  # [N, 3]
 
@@ -1087,6 +1084,7 @@ class Runner:
                 self.writer.add_scalar(f"{stage}/{k}", v, step)
             self.writer.flush()
 
+    @torch.no_grad()
     def eval_allstats(self):
         cfg = self.cfg
         device = self.device
@@ -1341,7 +1339,7 @@ def main(local_rank: int, world_rank, world_size: int, cfg: Config):
             print("Viewer is disabled in distributed training.")
     
     #nerf_xyzrgb = torch.load("/work/courses/dslab/team20/rbollati/running_env/big_sample.pt", map_location="cuda")
-    payload = torch.load("/work/courses/dslab/team20/positions_nerf/radsplat_positions_and_cams_rgb_1_000_000.pt", map_location="cuda")
+    payload = torch.load("/work/courses/dslab/team20/positions_nerf/radsplat_counter.pt", map_location="cuda")
 
     cfg.result_dir = os.path.abspath(os.path.expanduser(cfg.result_dir))
     print("DEBUG result_dir:", cfg.result_dir, file=sys.stderr)
@@ -1371,7 +1369,7 @@ def main(local_rank: int, world_rank, world_size: int, cfg: Config):
         # runner.save_ckpt()
 
     Path("/home/llazzaroni/out").mkdir(exist_ok=True)
-    with open("/home/llazzaroni/out/results_sfm_longrun.json", "w", encoding="utf-8") as f:
+    with open("/home/llazzaroni/out/results_counter_radsplat_sfm.json", "w", encoding="utf-8") as f:
         json.dump(runner.stats_arr, f, indent=2, ensure_ascii=False)
 
     if not cfg.disable_viewer:
