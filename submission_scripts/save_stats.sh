@@ -5,6 +5,9 @@
 #SBATCH -o logs/stats_%j.out
 #SBATCH -e logs/stats_%j.er
 
+# Lorenzo
+# This script run save_stats to run gsplat training and save statsevery 100 steps
+
 set -euo pipefail
 
 [ -f /etc/profile.d/modules.sh ] && source /etc/profile.d/modules.sh
@@ -40,12 +43,12 @@ print("cv2:", cv2.__version__, "has calib3d:", hasattr(cv2,"getOptimalNewCameraM
 print("fused_ssim import OK")
 PY
 
-SCENE_DIR="/work/courses/dslab/team20/data/counter"
-RESULT_DIR="/home/llazzaroni"
+SCENE_DIR="/work/courses/dslab/team20/data/poster"
+RESULT_DIR="/home/rbollati"
 RENDER_TRAJ_PATH="ellipse"
 DATA_FACTOR=4
 
-REPO_DIR="/home/llazzaroni/RadSplat"
+REPO_DIR="/home/rbollati/ds-lab/RadSplat"
 cd "$REPO_DIR"
 
 srun python save_stats.py default \

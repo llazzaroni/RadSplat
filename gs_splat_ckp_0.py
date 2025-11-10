@@ -1197,7 +1197,7 @@ def main(local_rank: int, world_rank, world_size: int, cfg: Config):
             print("Viewer is disabled in distributed training.")
     
     # TODO change according to the location of the initialization tensor
-    nerf_xyzrgb = torch.load("/work/courses/dslab/team20/rbollati/running_env/edge_driven_sampling_no_smoothing.pt", map_location="cuda")
+    nerf_xyzrgb = torch.load("/work/courses/dslab/team20/rbollati/running_env/edg_nsamp_100k.pt", map_location="cuda")
 
     runner = Runner(local_rank, world_rank, world_size, cfg, nerf_xyzrgb)
 

@@ -7,8 +7,8 @@
 
 ###############################################################
 # DESCRIPTION: 
-# this iscript run the python script used to render a specific
-# image
+# This script sample points using the gs_initialization.py
+# script
 ###############################################################
 
 set +u
@@ -16,10 +16,14 @@ source /work/courses/dslab/team20/miniconda3/etc/profile.d/conda.sh
 conda activate gs50 
 set -u
 
+
+export RUNNING_DIR="/work/courses/dslab/team20/rbollati/running_env"
+export NERF_MODEL="$RUNNING_DIR/outputs/poster/nerfacto/2025-10-18_013814/config.yml"
+export OUTPUT_NAME="$RUNNING_DIR/ray_samples/sobel"
+
 echo "##################### [Job started] #####################"
-cd /work/courses/dslab/team20/rbollati/running_env
+cd 
 
 python ~/ds-lab/RadSplat/gs_initialization.py 
-# python ~/ds-lab/RadSplat/test.py 
 
 echo "##################### [TERMINATED] #####################"

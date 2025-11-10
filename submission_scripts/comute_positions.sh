@@ -5,6 +5,9 @@
 #SBATCH -o logs/nerf_%j.out
 #SBATCH -e logs/nerf_%j.er
 
+# Lorenzo
+# this script run nerf_query
+
 echo "##################### [Job started] #####################"
 echo "[set up env] navigating to folder"
 cd /work/courses/dslab/team20/rbollati/running_env

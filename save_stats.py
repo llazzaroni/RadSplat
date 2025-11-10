@@ -278,8 +278,10 @@ def create_splats_with_optimizers(
     else:
         raise ValueError("Please specify a correct init_type: sfm or random")
     '''
-    num_points = len(torch.from_numpy(parser.points).float())
+    # sfm
+    # num_points = len(torch.from_numpy(parser.points).float())
     xyzrgb = payload["xyzrgb"].detach().cpu().numpy()
+    num_points = len(xyzrgb)
     C_nerf_all = payload["camera_to_worlds"][:, :3, 3].detach().cpu().numpy()
 
     # --- build name lists from what you actually saved ---
@@ -1339,7 +1341,8 @@ def main(local_rank: int, world_rank, world_size: int, cfg: Config):
             print("Viewer is disabled in distributed training.")
     
     #nerf_xyzrgb = torch.load("/work/courses/dslab/team20/rbollati/running_env/big_sample.pt", map_location="cuda")
-    payload = torch.load("/work/courses/dslab/team20/positions_nerf/radsplat_counter.pt", map_location="cuda")
+    # TOCHANGE
+    payload = torch.load("/work/courses/dslab/team20/rbollati/running_env/ray_samples/poster-nerfacto-3k-sobel-edger.pt", map_location="cuda")
 
     cfg.result_dir = os.path.abspath(os.path.expanduser(cfg.result_dir))
     print("DEBUG result_dir:", cfg.result_dir, file=sys.stderr)
@@ -1368,8 +1371,9 @@ def main(local_rank: int, world_rank, world_size: int, cfg: Config):
         # Or, if you want to see the first checkpoint:
         # runner.save_ckpt()
 
-    Path("/home/llazzaroni/out").mkdir(exist_ok=True)
-    with open("/home/llazzaroni/out/results_counter_radsplat_sfm.json", "w", encoding="utf-8") as f:
+    Path("gs_out").mkdir(exist_ok=True)
+    # TOCHANGE
+    with open("gs_out/result-500k-sobel-poster.json", "w", encoding="utf-8") as f:
         json.dump(runner.stats_arr, f, indent=2, ensure_ascii=False)
 
     if not cfg.disable_viewer:

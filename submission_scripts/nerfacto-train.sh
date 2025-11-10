@@ -6,13 +6,11 @@
 #SBATCH -e logs/nerf_%j.er
 
 echo "##################### [Job started] #####################"
+
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] [set up env] started"
+
 echo "[set up env] navigating to folder"
 cd /work/courses/dslab/team20/rbollati/running_env
-
-echo "[set up env] nvidia-smi"
-nvidia-smi
-
-DATA_DIR=/work/courses/dslab/team20/data/bicycle
 
 echo "[set up env] activate conda environment"
 conda init
@@ -20,21 +18,27 @@ conda activate ns50
 
 module load cuda/12.8
 
-echo "[set up env] CUDA sanity check"
-python -c "import torch; print('torch:', torch.__version__); print('cuda available:', torch.cuda.is_available()); print('cuda version:', torch.version.cuda)"
+# echo "[set up env] CUDA sanity check"
+# python -c "import torch; print('torch:', torch.__version__); print('cuda available:', torch.cuda.is_available()); print('cuda version:', torch.version.cuda)"
+#
 
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] [set up env] finished"
 
-echo "[Donwload data] download nerfstudio data"
+# echo "[Donwload data] download nerfstudio data"
 # ns-download-data nerfstudio --capture-name=poster
 
-echo "[Training] training model"
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] [Training] started"
 ns-train nerfacto \
   --vis tensorboard \
+  --experiment-name "nerfacto-poster-3k-steps-allcheck" \
   --steps-per-eval-image 100 \
-  --logging.steps-per-log 10 \
-  --logging.local-writer.enable True \
-  --logging.local-writer.max-log-size=0 \
+  --max-num-iterations 3000 \
+  --steps-per-save 300 \
+  --save-only-latest-checkpoint False \
+  --logging.steps-per-log 200 \
   --data data/nerfstudio/poster
+
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] [Training] finished"
 
 # ns-train nerfacto  \
 #   --vis viewer+tensorboard \
