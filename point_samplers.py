@@ -47,7 +47,6 @@ def random_sampler(data_manager: DataManager, n: int, device) -> torch.Tensor:
     return ray_indices
 
 
-# def sobel_edge_detector_sampler(data_manager : DataManager, n : int,  device) -> torch.Tensor:
 def sobel_edge_detector_sampler(
     data_manager: DataManager, n: int, device
 ) -> torch.Tensor:
@@ -77,6 +76,77 @@ def sobel_edge_detector_sampler(
 
         # Convert to uint8
         gradient_magnitude = cv2.convertScaleAbs(gradient_magnitude).ravel()
+
+        # Normalize
+        gradient_magnitude = gradient_magnitude / 255
+
+        # smooth results
+        # smoothed = cv2.GaussianBlur(gradient_magnitude, (5, 5), 0).ravel()
+
+        img_weights[idx] = gradient_magnitude.sum()
+        normalized = gradient_magnitude / gradient_magnitude.sum()
+        pixels_weights.append(normalized)
+
+    x = []
+    y = []
+    camera_idx = []
+
+    img_weights = img_weights / img_weights.sum()
+    samples_per_image = np.floor(img_weights * n)
+
+    for ind, weights in enumerate(pixels_weights):
+
+        H,W = imgs_shapes[ind]
+
+        print(H)
+        print(W)
+        img_indeces = [(x,y) for y in range(H-1, -1, -1) for x in range(W)]
+        print(len(img_indeces))
+        print(len(weights))
+
+        sampled_indeces = np.random.choice(
+            len(img_indeces),
+            size = int(samples_per_image[ind]),
+            p = weights,
+            replace = False
+        )
+
+
+        for s_ind in sampled_indeces:
+            x.append(img_indeces[s_ind][0])
+            y.append(img_indeces[s_ind][1])
+        camera_idx += [ind] * len(sampled_indeces)
+
+    ray_indices = torch.stack([torch.tensor(camera_idx), torch.tensor(y), torch.tensor(x)], dim=-1).long()
+
+
+    return ray_indices
+
+def canny_edge_detector_sampler(
+    data_manager: DataManager, n: int, device
+) -> torch.Tensor:
+
+    dataset = data_manager.train_dataset
+
+    # determine how many points to sample from each image
+    img_weights = np.zeros(len(dataset))
+    imgs_shapes = []
+    pixels_weights = []
+
+    for idx in range(len(dataset)):
+
+        img = dataset.get_numpy_image(idx)
+        H, W, _ = img.shape
+        imgs_shapes.append((H,W))
+
+        # convert to gray scale
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+        # Apply canny operator
+        edges = cv2.Canny(img, threshold1=25, threshold2=60)
+
+        # Convert to uint8
+        gradient_magnitude = cv2.convertScaleAbs(edges).ravel()
 
         # Normalize
         gradient_magnitude = gradient_magnitude / 255
