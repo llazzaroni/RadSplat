@@ -183,3 +183,24 @@ def canny_edge_detector_sampler(
     ray_indices = torch.stack([torch.tensor(camera_idx), torch.tensor(y), torch.tensor(x)], dim=-1).long()
 
     return ray_indices
+
+def mixed_sampling(data_manager: DataManager, n : int,  share_rnd : float, edge_detector : str, device : str) -> torch.Tensor:
+
+    random_saple_size = int(n * share_rnd)
+    edge_sample_size = n - random_saple_size
+
+    rnd_sample = random_sampler(data_manager = data_manager, n =random_saple_size, device=device)
+
+    if edge_detector == "canny":
+        edge_sample = canny_edge_detector_sampler(data_manager, edge_sample_size, device)
+    else:
+        edge_sample = sobel_edge_detector_sampler(data_manager, edge_sample_size, device)
+
+
+    concatenated = torch.cat([rnd_sample, edge_sample], dim=0)
+
+    return concatenated
+
+
+
+
