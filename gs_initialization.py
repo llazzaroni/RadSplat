@@ -3,7 +3,7 @@ import math
 import torch
 
 from nerf_models import Nerfacto
-from point_samplers import sobel_edge_detector_sampler, random_sampler
+from point_samplers import sobel_edge_detector_sampler, canny_edge_detector_sampler, random_sampler
 from gs_initializer import Initializer
 from pathlib import Path
 import argparse
@@ -72,8 +72,7 @@ if __name__ == "__main__":
     # saple points
 
     if args.ray_sampling_strategy == "canny":
-        # TODO
-        coords = sobel_edge_detector_sampler(model.pipeline.datamanager, N_RAYS, model.device)
+        coords = canny_edge_detector_sampler(model.pipeline.datamanager, N_RAYS, model.device)
     elif args.ray_sampling_strategy == "sobel":
         coords = sobel_edge_detector_sampler(model.pipeline.datamanager, N_RAYS, model.device)
     else:

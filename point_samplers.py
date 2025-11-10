@@ -98,11 +98,7 @@ def sobel_edge_detector_sampler(
 
         H,W = imgs_shapes[ind]
 
-        print(H)
-        print(W)
         img_indeces = [(x,y) for y in range(H-1, -1, -1) for x in range(W)]
-        print(len(img_indeces))
-        print(len(weights))
 
         sampled_indeces = np.random.choice(
             len(img_indeces),
@@ -169,11 +165,7 @@ def canny_edge_detector_sampler(
 
         H,W = imgs_shapes[ind]
 
-        print(H)
-        print(W)
         img_indeces = [(x,y) for y in range(H-1, -1, -1) for x in range(W)]
-        print(len(img_indeces))
-        print(len(weights))
 
         sampled_indeces = np.random.choice(
             len(img_indeces),

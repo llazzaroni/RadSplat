@@ -1342,7 +1342,7 @@ def main(local_rank: int, world_rank, world_size: int, cfg: Config):
     
     #nerf_xyzrgb = torch.load("/work/courses/dslab/team20/rbollati/running_env/big_sample.pt", map_location="cuda")
     # TOCHANGE
-    payload = torch.load("/work/courses/dslab/team20/rbollati/running_env/ray_samples/poster-nerfacto-3k-sobel-edger.pt", map_location="cuda")
+    payload = torch.load("/work/courses/dslab/team20/rbollati/running_env/ray_samples/canny_500k.pt", map_location="cuda")
 
     cfg.result_dir = os.path.abspath(os.path.expanduser(cfg.result_dir))
     print("DEBUG result_dir:", cfg.result_dir, file=sys.stderr)
@@ -1373,7 +1373,7 @@ def main(local_rank: int, world_rank, world_size: int, cfg: Config):
 
     Path("gs_out").mkdir(exist_ok=True)
     # TOCHANGE
-    with open("gs_out/result-500k-sobel-poster.json", "w", encoding="utf-8") as f:
+    with open("gs_out/canny_500k.json", "w", encoding="utf-8") as f:
         json.dump(runner.stats_arr, f, indent=2, ensure_ascii=False)
 
     if not cfg.disable_viewer:
