@@ -42,7 +42,7 @@ def random_sampler(data_manager: DataManager, n: int, device) -> torch.Tensor:
     x = torch.floor(torch.rand(n, device=device) * sel_W).long()
 
     # compact everything in one tensor
-    ray_indices = torch.stack([img_idx, y, x], dim=-1).long()
+    ray_indices = torch.stack([img_idx, y, x], dim=-1).long().to(torch.device(device))
 
     return ray_indices
 
@@ -113,7 +113,8 @@ def sobel_edge_detector_sampler(
             y.append(img_indeces[s_ind][1])
         camera_idx += [ind] * len(sampled_indeces)
 
-    ray_indices = torch.stack([torch.tensor(camera_idx), torch.tensor(y), torch.tensor(x)], dim=-1).long()
+    ray_indices = torch.stack([torch.tensor(camera_idx), torch.tensor(y), torch.tensor(x)], dim=-1).long().to(torch.device(device))
+
 
 
     return ray_indices
@@ -180,7 +181,8 @@ def canny_edge_detector_sampler(
             y.append(img_indeces[s_ind][1])
         camera_idx += [ind] * len(sampled_indeces)
 
-    ray_indices = torch.stack([torch.tensor(camera_idx), torch.tensor(y), torch.tensor(x)], dim=-1).long()
+    ray_indices = torch.stack([torch.tensor(camera_idx), torch.tensor(y), torch.tensor(x)], dim=-1).long().to(torch.device(device))
+
 
     return ray_indices
 
