@@ -36,6 +36,14 @@ def create_parser():
     )
 
     parser.add_argument(
+        "--sampling-size",
+        "-n",
+        type=str,
+        required=True,
+        help="number of rays to sample"
+    )
+
+    parser.add_argument(
         "--ray-sampling-strategy",
         "-s",
         type=str,
@@ -59,7 +67,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     folder = args.nerf_folder
-    N_RAYS = 500_000
+    N_RAYS = args.sampling_size
     BATCH_SIZE = 5_000
     RAYS_BATCH_NAME = args.output_name
     n_batches = math.ceil(N_RAYS / BATCH_SIZE)
@@ -83,7 +91,6 @@ if __name__ == "__main__":
 
     xyzrgb_chunks = []
     for b in range(n_batches):
-        print(f"worinng of chink {b}/{n_batches}")
 
         # get initial and final index of the index rays to query
         s = b * BATCH_SIZE

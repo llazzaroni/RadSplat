@@ -49,12 +49,15 @@ ns-train nerfacto \
   --max-num-iterations $NERF_MAX_NUM_ITERATIONS \
   --save-only-latest-checkpoint True \
   --logging.steps-per-log 100 \
-   colmap \
-   --colmap-path "${DATA_DIR}/sparse/0" \
-   --images-path "${DATA_DIR}/images"
+  --logging.profiler "pytorch" \
+  colmap \
+  --colmap-path "${DATA_DIR}/sparse/0" \
+  --images-path "${DATA_DIR}/images"
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] [Training-nerfacto] finished"
 
+START_SAMPLING=$(($(date +%s)*1000))
 python ~/ds-lab/RadSplat/nerf_query.py --nerf-folder $NERF_MODEL --output-name $OUTPUT_NAME --ray-sampling-strategy $RAY_SAMPLING_STRATEGY 
+END_SAMPLING=$(($(date +%s)*1000))
 
 echo "##################### [TERMINATED] #####################"
