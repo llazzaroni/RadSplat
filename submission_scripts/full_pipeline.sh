@@ -20,11 +20,11 @@ set -u
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] [set up env] finished"
 
 export RUNNING_DIR="/work/courses/dslab/team20/rbollati/running_env"
-export BASE_DATA_DIR="/work/courses/dslab/team20/data/mipnerf360/"
-export SCENE="bicycle"
+export BASE_DATA_DIR="/work/courses/dslab/team20/data/mipnerf360"
+export SCENE="flowers"
 
-export EXPERIMENT_NAME="$(date '%Y%m%d_%H%M%S')"
-export EXPERIMENT_DIR="${RUNNINNG_DIR}/${EXPERIMENT_NAME}"
+export EXPERIMENT_NAME="$(date '+%Y%m%d_%H%M%S')"
+export EXPERIMENT_DIR="${RUNNING_DIR}/experiments/${EXPERIMENT_NAME}"
 
 ## PARAMETERS NERF
 export NERF_MAX_NUM_ITERATIONS=500
@@ -47,15 +47,14 @@ ns-train nerfacto \
   --timestamp "${EXPERIMENT_NAME}" \
   --steps-per-eval-image $NERF_MAX_NUM_ITERATIONS \
   --max-num-iterations $NERF_MAX_NUM_ITERATIONS \
-  --steps-per-save $NERF_MAX_NUM_ITERATIONS \
   --save-only-latest-checkpoint True \
   --logging.steps-per-log 100 \
-  colmap \
-  --colmap-path "${DATA_DIR}/sparse/0" \
-  --images-path "${DATA_DIR}/images"
+   colmap \
+   --colmap-path "${DATA_DIR}/sparse/0" \
+   --images-path "${DATA_DIR}/images"
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] [Training-nerfacto] finished"
 
-python ~/ds-lab/RadSplat/gs_initialization.py --nerf-folder $NERF_MODEL --output-name $OUTPUT_NAME --ray-sampling-strategy $RAY_SAMPLING_STRATEGY 
+python ~/ds-lab/RadSplat/nerf_query.py --nerf-folder $NERF_MODEL --output-name $OUTPUT_NAME --ray-sampling-strategy $RAY_SAMPLING_STRATEGY 
 
 echo "##################### [TERMINATED] #####################"
