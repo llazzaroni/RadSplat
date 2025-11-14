@@ -40,13 +40,22 @@ from submodules.gsplat.gsplat.strategy import DefaultStrategy, MCMCStrategy
 from submodules.gsplat.examples.gsplat_viewer import GsplatViewer, GsplatRenderTabState
 from nerfview import CameraState, RenderTabState, apply_float_colormap
 
+# Pass as flags:
+# nerf_init which specifies whether we initialize with nerf or with sfm
+# pt_path which specifies the path of the tensor with the positions
+# save_first_ckp which save first ckp and make the video
+
 
 @dataclass
 class Config:
     # Disable viewer
     disable_viewer: bool = False
     # Path to the .pt files. If provide, it will skip training and run evaluation only.
-    ckpt: Optional[List[str]] = None
+    #ckpt: Optional[List[str]] = None
+
+    save_first_ckp: bool = False
+    nerf_init: bool = True
+    pt_path: str
     # Name of compression strategy to use
     compression: Optional[Literal["png"]] = None
     # Render trajectory path
@@ -247,6 +256,7 @@ def _norm_name(p: str) -> str:
 def create_splats_with_optimizers(
     parser: Parser,
     payload,
+    nerf_init,
     init_type: str = "sfm",
     init_num_pts: int = 100_000,
     init_extent: float = 3.0,
@@ -268,66 +278,69 @@ def create_splats_with_optimizers(
     world_rank: int = 0,
     world_size: int = 1,
 ) -> Tuple[torch.nn.ParameterDict, Dict[str, torch.optim.Optimizer]]:
-    '''
-    if init_type == "sfm":
-        points = torch.from_numpy(parser.points).float()
-        rgbs = torch.from_numpy(parser.points_rgb / 255.0).float()
-    elif init_type == "random":
-        points = init_extent * scene_scale * (torch.rand((init_num_pts, 3)) * 2 - 1)
-        rgbs = torch.rand((init_num_pts, 3))
+    
+    if nerf_init:
+        # num_points = len(torch.from_numpy(parser.points).float())
+        xyzrgb = payload["xyzrgb"].detach().cpu().numpy()
+        num_points = len(xyzrgb)
+        C_nerf_all = payload["camera_to_worlds"][:, :3, 3].detach().cpu().numpy()
+
+        # --- build name lists from what you actually saved ---
+        # prefer relative list if present, else absolute
+        nerf_paths = payload.get("image_filenames_rel") or payload.get("image_filenames_abs")
+        if nerf_paths is None:
+            raise KeyError("payload is missing 'image_filenames_rel'/'image_filenames_abs'")
+
+        # normalize both sides
+        nerf_keys = [_norm_name(p) for p in nerf_paths]
+        gs_names  = parser.image_names                       # these are COLMAP image names (relative)
+        gs_keys   = [_norm_name(p) for p in gs_names]
+        name_to_gs = {k: i for i, k in enumerate(gs_keys)}
+
+        # intersection in NeRF-train order
+        pairs = [(i, name_to_gs[k]) for i, k in enumerate(nerf_keys) if k in name_to_gs]
+        if len(pairs) < 3:
+            # help debugging: show a few sample unmatched names
+            ex = set(nerf_keys[:10]) - set(name_to_gs.keys())
+            raise RuntimeError(f"Not enough overlapping frames (found {len(pairs)}). "
+                            f"Example unmatched (first few): {list(ex)[:5]}")
+
+        i_nerf = np.array([p[0] for p in pairs], dtype=np.int64)
+        i_gs   = np.array([p[1] for p in pairs], dtype=np.int64)
+
+        # subselect cameras in the same order
+        C_nerf = C_nerf_all[i_nerf]                # (M, 3)
+        C_gs   = parser.camtoworlds[i_gs, :3, 3]   # (M, 3)
+
+        # Umeyama alignment
+        s, R, t = umeyama_align(C_nerf, C_gs, with_scale=True)
+        Cn_aligned = (s * (R @ C_nerf.T).T + t)
+        print("overlap frames:", len(pairs), "mean |ΔC| =", np.linalg.norm(Cn_aligned - C_gs, axis=1).mean())
+
+        # transform all NeRF points
+        xyz = xyzrgb[:, :3]
+        xyz_aligned = (s * (R @ xyz.T).T + t)
+        xyzrgb_aligned = np.concatenate([xyz_aligned, xyzrgb[:, 3:6]], axis=1)
+
+        points = torch.from_numpy(xyzrgb_aligned[:num_points, :3]).float().to(device)
+        rgbs   = torch.from_numpy(xyzrgb_aligned[:num_points, 3:6]).float().to(device)
+        if rgbs.max() > 1.0:
+            rgbs = rgbs / 255.0
+
+        # Initialize the GS size to be the average dist of the 3 nearest neighbors
+        dist2_avg = (knn(points, 2)[:, 1:] ** 2).mean(dim=-1)  # [N,]
     else:
-        raise ValueError("Please specify a correct init_type: sfm or random")
-    '''
-    # sfm
-    # num_points = len(torch.from_numpy(parser.points).float())
-    xyzrgb = payload["xyzrgb"].detach().cpu().numpy()
-    num_points = len(xyzrgb)
-    C_nerf_all = payload["camera_to_worlds"][:, :3, 3].detach().cpu().numpy()
+        if init_type == "sfm":
+            points = torch.from_numpy(parser.points).float()
+            rgbs = torch.from_numpy(parser.points_rgb / 255.0).float()
+        elif init_type == "random":
+            points = init_extent * scene_scale * (torch.rand((init_num_pts, 3)) * 2 - 1)
+            rgbs = torch.rand((init_num_pts, 3))
+        else:
+            raise ValueError("Please specify a correct init_type: sfm or random")
+        # Initialize the GS size to be the average dist of the 3 nearest neighbors
+        dist2_avg = (knn(points, 4)[:, 1:] ** 2).mean(dim=-1)  # [N,]
 
-    # --- build name lists from what you actually saved ---
-    # prefer relative list if present, else absolute
-    nerf_paths = payload.get("image_filenames_rel") or payload.get("image_filenames_abs")
-    if nerf_paths is None:
-        raise KeyError("payload is missing 'image_filenames_rel'/'image_filenames_abs'")
-
-    # normalize both sides
-    nerf_keys = [_norm_name(p) for p in nerf_paths]
-    gs_names  = parser.image_names                       # these are COLMAP image names (relative)
-    gs_keys   = [_norm_name(p) for p in gs_names]
-    name_to_gs = {k: i for i, k in enumerate(gs_keys)}
-
-    # intersection in NeRF-train order
-    pairs = [(i, name_to_gs[k]) for i, k in enumerate(nerf_keys) if k in name_to_gs]
-    if len(pairs) < 3:
-        # help debugging: show a few sample unmatched names
-        ex = set(nerf_keys[:10]) - set(name_to_gs.keys())
-        raise RuntimeError(f"Not enough overlapping frames (found {len(pairs)}). "
-                           f"Example unmatched (first few): {list(ex)[:5]}")
-
-    i_nerf = np.array([p[0] for p in pairs], dtype=np.int64)
-    i_gs   = np.array([p[1] for p in pairs], dtype=np.int64)
-
-    # subselect cameras in the same order
-    C_nerf = C_nerf_all[i_nerf]                # (M, 3)
-    C_gs   = parser.camtoworlds[i_gs, :3, 3]   # (M, 3)
-
-    # Umeyama alignment
-    s, R, t = umeyama_align(C_nerf, C_gs, with_scale=True)
-    Cn_aligned = (s * (R @ C_nerf.T).T + t)
-    print("overlap frames:", len(pairs), "mean |ΔC| =", np.linalg.norm(Cn_aligned - C_gs, axis=1).mean())
-
-    # transform all NeRF points
-    xyz = xyzrgb[:, :3]
-    xyz_aligned = (s * (R @ xyz.T).T + t)
-    xyzrgb_aligned = np.concatenate([xyz_aligned, xyzrgb[:, 3:6]], axis=1)
-
-    points = torch.from_numpy(xyzrgb_aligned[:num_points, :3]).float().to(device)
-    rgbs   = torch.from_numpy(xyzrgb_aligned[:num_points, 3:6]).float().to(device)
-    if rgbs.max() > 1.0:
-        rgbs = rgbs / 255.0
-
-    # Initialize the GS size to be the average dist of the 3 nearest neighbors
-    dist2_avg = (knn(points, 2)[:, 1:] ** 2).mean(dim=-1)  # [N,]
     dist_avg = torch.sqrt(dist2_avg)
     scales = torch.log(dist_avg * init_scale).unsqueeze(-1).repeat(1, 3)  # [N, 3]
 
@@ -440,6 +453,7 @@ class Runner:
         self.splats, self.optimizers = create_splats_with_optimizers(
             self.parser,
             payload=payload,
+            nerf_init=cfg.nerf_init,
             init_type=cfg.init_type,
             init_num_pts=cfg.init_num_pts,
             init_extent=cfg.init_extent,
@@ -1340,9 +1354,7 @@ def main(local_rank: int, world_rank, world_size: int, cfg: Config):
         if world_rank == 0:
             print("Viewer is disabled in distributed training.")
     
-    #nerf_xyzrgb = torch.load("/work/courses/dslab/team20/rbollati/running_env/big_sample.pt", map_location="cuda")
-    # TOCHANGE
-    payload = torch.load("/work/courses/dslab/team20/rbollati/running_env/ray_samples/canny_500k.pt", map_location="cuda")
+    payload = torch.load(cfg.pt_path, map_location="cuda")
 
     cfg.result_dir = os.path.abspath(os.path.expanduser(cfg.result_dir))
     print("DEBUG result_dir:", cfg.result_dir, file=sys.stderr)
@@ -1353,8 +1365,8 @@ def main(local_rank: int, world_rank, world_size: int, cfg: Config):
 
     runner = Runner(local_rank, world_rank, world_size, cfg, payload)
 
-    if cfg.ckpt is not None:
-        # run eval only
+    if cfg.save_first_ckp:
+        runner.save_ckpt()
         ckpts = [
             torch.load(file, map_location=runner.device, weights_only=True)
             for file in cfg.ckpt
@@ -1366,12 +1378,10 @@ def main(local_rank: int, world_rank, world_size: int, cfg: Config):
         runner.render_traj(step=step)
         if cfg.compression is not None:
             runner.run_compression(step=step)
-    else:
-        runner.train()
-        # Or, if you want to see the first checkpoint:
-        # runner.save_ckpt()
 
-    Path("gs_out").mkdir(exist_ok=True)
+    runner.train()
+
+    Path(cfg.result_dir).mkdir(exist_ok=True)
     # TOCHANGE
     with open("gs_out/canny_500k.json", "w", encoding="utf-8") as f:
         json.dump(runner.stats_arr, f, indent=2, ensure_ascii=False)
