@@ -1,6 +1,7 @@
 import warnings
 import math
 import torch
+import logging
 
 from nerf_models import Nerfacto
 from point_samplers import sobel_edge_detector_sampler, canny_edge_detector_sampler, random_sampler
@@ -92,21 +93,21 @@ if __name__ == "__main__":
         batch_rays_indexes = coords[s:e, :]
         B = batch_rays_indexes.shape[0]
 
-        print('########### sampling rays')
+        logging.info('sampling rays')
         rays = model.create_rays(batch_rays_indexes)
 
-        print('########### sampling points')
+        logging.info('sampling points')
 
         sampled = model.sample_points(rays)
         outputs, field_outputs, weights  = model.evaluate_points(sampled)
 
-        print('########### init gs')
+        logging.info('init gs')
         gs_initializer = Initializer(weights, sampled)
 
-        print('########### compute trasmittance')
+        logging.info('compute trasmittance')
         trasmittance = gs_initializer.compute_transmittance()
 
-        print('########### computer initial_position')
+        logging.info('computer initial_position')
         initial_position = gs_initializer.compute_inital_positions(trasmittance, 0.5)
 
         xyzrgb_batch = torch.cat([initial_position, outputs['rgb']], dim=-1)
@@ -127,5 +128,5 @@ if __name__ == "__main__":
         "image_filenames_rel": image_filenames_rel,
     }
 
-    print('########### saving initial positions')
+    logging.info('saving initial positions')
     torch.save(payload, RAYS_BATCH_NAME)

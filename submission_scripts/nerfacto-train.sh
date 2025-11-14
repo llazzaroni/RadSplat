@@ -22,7 +22,6 @@ module load cuda/12.8
 # python -c "import torch; print('torch:', torch.__version__); print('cuda available:', torch.cuda.is_available()); print('cuda version:', torch.version.cuda)"
 #
 
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] [set up env] finished"
 
 # echo "[Donwload data] download nerfstudio data"
 # ns-download-data nerfstudio --capture-name=poster

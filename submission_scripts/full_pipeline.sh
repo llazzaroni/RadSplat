@@ -7,23 +7,54 @@
 
 ###############################################################
 # DESCRIPTION: 
-# This script sample points using the gs_initialization.py
-# script
+# FULL pipeline to run nerfacto and sample points 
 ###############################################################
+
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] [set up env] started"
 
 set +u
 source /work/courses/dslab/team20/miniconda3/etc/profile.d/conda.sh
 conda activate ns50 
 set -u
 
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] [set up env] finished"
 
 export RUNNING_DIR="/work/courses/dslab/team20/rbollati/running_env"
-export NERF_MODEL="$RUNNING_DIR/outputs/poster/nerfacto/2025-10-18_013814/config.yml"
-export OUTPUT_NAME="$RUNNING_DIR/ray_samples/canny_500k.pt"
+export BASE_DATA_DIR="/work/courses/dslab/team20/data/mipnerf360/"
+export SCENE="bicycle"
+
+export EXPERIMENT_NAME="$(date '%Y%m%d_%H%M%S')"
+export EXPERIMENT_DIR="${RUNNINNG_DIR}/${EXPERIMENT_NAME}"
+
+## PARAMETERS NERF
+export NERF_MAX_NUM_ITERATIONS=500
+export DATA_DIR="${BASE_DATA_DIR}/${SCENE}"
+export NERF_MODEL="${EXPERIMENT_DIR}/outputs/${EXPERIMENT_NAME}/nerfacto/${EXPERIMENT_NAME}/config.yml"
+
+export OUTPUT_NAME="${EXPERIMENT_DIR}/ray_sample.pt"
 export RAY_SAMPLING_STRATEGY="canny"
 
+mkdir "${EXPERIMENT_DIR}"
+
 echo "##################### [Job started] #####################"
-cd $RUNNING_DIR
+cd "${EXPERIMENT_DIR}"
+
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] [Training-nerfacto] started"
+
+ns-train nerfacto \
+  --vis tensorboard \
+  --experiment-name "${EXPERIMENT_NAME}" \
+  --timestamp "${EXPERIMENT_NAME}" \
+  --steps-per-eval-image $NERF_MAX_NUM_ITERATIONS \
+  --max-num-iterations $NERF_MAX_NUM_ITERATIONS \
+  --steps-per-save $NERF_MAX_NUM_ITERATIONS \
+  --save-only-latest-checkpoint True \
+  --logging.steps-per-log 100 \
+  colmap \
+  --colmap-path "${DATA_DIR}/sparse/0" \
+  --images-path "${DATA_DIR}/images"
+
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] [Training-nerfacto] finished"
 
 python ~/ds-lab/RadSplat/gs_initialization.py --nerf-folder $NERF_MODEL --output-name $OUTPUT_NAME --ray-sampling-strategy $RAY_SAMPLING_STRATEGY 
 
