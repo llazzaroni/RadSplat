@@ -48,7 +48,7 @@ from nerfview import CameraState, RenderTabState, apply_float_colormap
 
 @dataclass
 class Config:
-    pt_path: str
+    pt_path: str = ""
     # Disable viewer
     disable_viewer: bool = False
     # Path to the .pt files. If provide, it will skip training and run evaluation only.
@@ -1367,23 +1367,23 @@ def main(local_rank: int, world_rank, world_size: int, cfg: Config):
 
     if cfg.save_first_ckp:
         runner.save_ckpt()
-        ckpts = [
-            torch.load(file, map_location=runner.device, weights_only=True)
-            for file in cfg.ckpt
-        ]
-        for k in runner.splats.keys():
-            runner.splats[k].data = torch.cat([ckpt["splats"][k] for ckpt in ckpts])
-        step = ckpts[0]["step"]
-        runner.eval(step=step)
-        runner.render_traj(step=step)
-        if cfg.compression is not None:
-            runner.run_compression(step=step)
+        # ckpts = [
+        #     torch.load(file, map_location=runner.device, weights_only=True)
+        #     for file in cfg.ckpt
+        # ]
+        # for k in runner.splats.keys():
+        #     runner.splats[k].data = torch.cat([ckpt["splats"][k] for ckpt in ckpts])
+        # step = ckpts[0]["step"]
+        # runner.eval(step=step)
+        # runner.render_traj(step=step)
+        # if cfg.compression is not None:
+        #     runner.run_compression(step=step)
 
     runner.train()
 
     Path(cfg.result_dir).mkdir(exist_ok=True)
-    # TOCHANGE
-    with open("gs_out/canny_500k.json", "w", encoding="utf-8") as f:
+    out_path = os.path.join(cfg.result_dir, "gsplat_stats.json")
+    with open(out_path, "w", encoding="utf-8") as f:
         json.dump(runner.stats_arr, f, indent=2, ensure_ascii=False)
 
     if not cfg.disable_viewer:
