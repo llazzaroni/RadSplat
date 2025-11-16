@@ -91,16 +91,13 @@ pip install --no-build-isolation --no-binary :all: --force-reinstall \
 RENDER_TRAJ_PATH="ellipse"
 DATA_FACTOR=4
 
-REPO_DIR="~/ds-lab/RadSplat"
-cd "$REPO_DIR"
-
-srun python save_stats.py default \
-  --nerf_init True \
-  --pt_path "$POSITION_TENSOR_OUTPUT_NAME" \
-  --save_first_ckp True \
-  --eval_steps -1 \
-  --disable_viewer \
-  --data_factor "$DATA_FACTOR" \
-  --render_traj_path "$RENDER_TRAJ_PATH" \
-  --data_dir "$DATA_DIR/" \
-  --result_dir "$EXPERIMENT_DIR/"
+python ~/ds-lab/RadSplat/save_stats.py default \
+  --nerf-init \
+  --pt-path "$POSITION_TENSOR_OUTPUT_NAME" \
+  --save-first-ckp \
+  --eval-steps -1 \
+  --disable-viewer \
+  --data-factor "$DATA_FACTOR" \
+  --render-traj-path "$RENDER_TRAJ_PATH" \
+  --data-dir "$DATA_DIR/" \
+  --result-dir "$EXPERIMENT_DIR/"
