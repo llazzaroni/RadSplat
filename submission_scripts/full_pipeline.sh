@@ -91,6 +91,9 @@ pip install --no-build-isolation --no-binary :all: --force-reinstall \
 RENDER_TRAJ_PATH="ellipse"
 DATA_FACTOR=4
 
+REPO_DIR="~/ds-lab/RadSplat"
+cd "$REPO_DIR"
+
 srun python save_stats.py default \
   --nerf_init True \
   --pt_path "$POSITION_TENSOR_OUTPUT_NAME" \
