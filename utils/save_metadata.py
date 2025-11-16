@@ -58,7 +58,7 @@ if __name__ == "__main__":
             "experiment-name" : args.experiment_name,
             "nerf-model" : args.nerf_model,
             "nerf-steps" : args.nerf_steps,
-            "rays-sampled" : atgs.num_rays,
+            "rays-sampled" : args.num_rays,
             "sampling-strategy" : args.sampling_strategy
         }
 

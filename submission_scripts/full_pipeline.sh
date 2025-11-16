@@ -103,6 +103,12 @@ python ~/ds-lab/RadSplat/save_stats.py default \
   --data-dir "$DATA_DIR/" \
   --result-dir "$EXPERIMENT_DIR/"
 
+set +u
+conda deactivate
+set -u
+
+set -euo pipefail
+
 # save experiment metadata
 python ~/ds-lab/RadSplat/utils/save_metadata.py --nerf-model "nerfacto" \
   --nerf-steps $NERF_MAX_NUM_ITERATIONS \
