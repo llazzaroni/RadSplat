@@ -56,8 +56,9 @@ ns-train nerfacto \
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] [Training-nerfacto] finished"
 
+export SAMPLING_SIZE=100000
 START_SAMPLING=$(($(date +%s)*1000))
-python ~/ds-lab/RadSplat/nerf_step.py --nerf-folder $NERF_MODEL --output-name $POSITION_TENSOR_OUTPUT_NAME --sampling-size 500000 --ray-sampling-strategy $RAY_SAMPLING_STRATEGY 
+python ~/ds-lab/RadSplat/nerf_step.py --nerf-folder $NERF_MODEL --output-name $POSITION_TENSOR_OUTPUT_NAME --sampling-size $SAMPLING_SIZE --ray-sampling-strategy $RAY_SAMPLING_STRATEGY 
 END_SAMPLING=$(($(date +%s)*1000))
 
 echo "##################### [FINISHED NERF] #####################"
@@ -101,3 +102,11 @@ python ~/ds-lab/RadSplat/save_stats.py default \
   --render-traj-path "$RENDER_TRAJ_PATH" \
   --data-dir "$DATA_DIR/" \
   --result-dir "$EXPERIMENT_DIR/"
+
+# save experiment metadata
+python ~/ds-lab/RadSplat/utils/save_metadata.py --nerf-model "nerfacto" \
+  --nerf-steps $NERF_MAX_NUM_ITERATIONS \
+  --num-rays $SAMPLING_SIZE \
+  --sampling-stragegy $RAY_SAMPLING_STRATEGY \
+  --experiment-name $EXPERIMENT_NAME
+
