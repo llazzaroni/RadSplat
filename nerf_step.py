@@ -67,7 +67,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     folder = args.nerf_folder
-    N_RAYS = args.sampling_size
+    N_RAYS = int(args.sampling_size)
     BATCH_SIZE = 5_000
     RAYS_BATCH_NAME = args.output_name
     n_batches = math.ceil(N_RAYS / BATCH_SIZE)

@@ -57,7 +57,7 @@ ns-train nerfacto \
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] [Training-nerfacto] finished"
 
 START_SAMPLING=$(($(date +%s)*1000))
-python ~/ds-lab/RadSplat/nerf_query.py --nerf-folder $NERF_MODEL --output-name $POSITION_TENSOR_OUTPUT_NAME --ray-sampling-strategy $RAY_SAMPLING_STRATEGY 
+python ~/ds-lab/RadSplat/nerf_step.py --nerf-folder $NERF_MODEL --output-name $POSITION_TENSOR_OUTPUT_NAME --sampling-size 500000 --ray-sampling-strategy $RAY_SAMPLING_STRATEGY 
 END_SAMPLING=$(($(date +%s)*1000))
 
 echo "##################### [FINISHED NERF] #####################"

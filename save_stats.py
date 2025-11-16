@@ -48,6 +48,7 @@ from nerfview import CameraState, RenderTabState, apply_float_colormap
 
 @dataclass
 class Config:
+    pt_path: str
     # Disable viewer
     disable_viewer: bool = False
     # Path to the .pt files. If provide, it will skip training and run evaluation only.
@@ -55,7 +56,6 @@ class Config:
 
     save_first_ckp: bool = False
     nerf_init: bool = True
-    pt_path: str
     # Name of compression strategy to use
     compression: Optional[Literal["png"]] = None
     # Render trajectory path
@@ -1168,13 +1168,13 @@ class Runner:
         ) as f:
             json.dump(stats, f)
         data = {"step": 0, "splats": self.splats.state_dict()}
-        if cfg.pose_opt:
-            if world_size > 1:
+        if self.cfg.pose_opt:
+            if self.world_size > 1:
                 data["pose_adjust"] = self.pose_adjust.module.state_dict()
             else:
                 data["pose_adjust"] = self.pose_adjust.state_dict()
         if cfg.app_opt:
-            if world_size > 1:
+            if self.world_size > 1:
                 data["app_module"] = self.app_module.module.state_dict()
             else:
                 data["app_module"] = self.app_module.state_dict()
