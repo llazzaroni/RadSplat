@@ -63,7 +63,9 @@ END_SAMPLING=$(($(date +%s)*1000))
 echo "##################### [FINISHED NERF] #####################"
 echo "##################### [STARTING GSPLAT] #####################"
 
+set +u
 conda deactivate
+set -u
 
 set -euo pipefail
 
