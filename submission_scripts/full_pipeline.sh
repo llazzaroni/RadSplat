@@ -28,7 +28,7 @@ for scenename in $scenes;do
 
   echo "---------------------- [Scene: ${scenename}] ----------------------"
 
-  export SCENE=scenename
+  export SCENE=$scenename
 
   export EXPERIMENT_NAME="$(date '+%Y%m%d_%H%M%S')_{$SCENE}"
   export EXPERIMENT_DIR="${RUNNING_DIR}/experiments/${EXPERIMENT_NAME}"

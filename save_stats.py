@@ -991,6 +991,11 @@ class Runner:
             # Call the SLIGHTLY modified eval function
             if step % 100 == 0:
                 self.eval_allstats()
+                if world_rank == 0:
+                    training_time = time.time() - global_tic
+                    out_path = os.path.join(cfg.result_dir, "time_logs.txt")
+                    with open(out_path, "a") as f:
+                        f.write(f"Gaussian Splatting step {step} - {training_time}\n")
 
             # run compression
             if cfg.compression is not None and step in [i - 1 for i in cfg.eval_steps]:
@@ -1008,6 +1013,7 @@ class Runner:
                 )
                 # Update the scene.
                 self.viewer.update(step, num_train_rays_per_step)
+            
 
     @torch.no_grad()
     def eval(self, step: int, stage: str = "val"):
