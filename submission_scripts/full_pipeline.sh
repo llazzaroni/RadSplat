@@ -10,17 +10,7 @@
 # FULL pipeline to run nerfacto and sample points 
 ###############################################################
 
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] [set up env] started"
-
-set +u
-source /work/courses/dslab/team20/miniconda3/etc/profile.d/conda.sh
-conda activate ns50_ns-upgraded
-set -u
-
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] [set up env] finished"
-
-scenes="bicycle"
-# scenes="bicycle  bonsai  counter  flowers  garden  kitchen  room  stump  treehill"
+scenes="bicycle  bonsai  counter  flowers  garden  kitchen  room  stump  treehill"
 
 export RUNNING_DIR="/work/courses/dslab/team20/rbollati/running_env"
 export BASE_DATA_DIR="/work/courses/dslab/team20/data/mipnerf360"
@@ -28,6 +18,14 @@ export BASE_DATA_DIR="/work/courses/dslab/team20/data/mipnerf360"
 for scenename in $scenes;do
 
   echo "---------------------- [Scene: ${scenename}] ----------------------"
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] [set up env] started"
+
+  set +u
+  source /work/courses/dslab/team20/miniconda3/etc/profile.d/conda.sh
+  conda activate ns50_ns-upgraded
+  set -u
+
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] [set up env] finished"
 
   export SCENE=$scenename
 
