@@ -10,7 +10,8 @@
 # FULL pipeline to run nerfacto and sample points 
 ###############################################################
 
-scenes="bicycle  bonsai  counter  flowers  garden  kitchen  room  stump  treehill"
+# scenes="bicycle  bonsai  counter  flowers  garden  kitchen  room  stump  treehill"
+scenes="treehill"
 
 export RUNNING_DIR="/work/courses/dslab/team20/rbollati/running_env"
 export BASE_DATA_DIR="/work/courses/dslab/team20/data/mipnerf360"
@@ -29,25 +30,26 @@ for scenename in $scenes;do
 
   export SCENE=$scenename
 
+  ## Folders and output names
   export EXPERIMENT_NAME="$(date '+%Y%m%d_%H%M%S')_${SCENE}"
   export EXPERIMENT_DIR="${RUNNING_DIR}/experiments/${EXPERIMENT_NAME}"
-
-  ## PARAMETERS NERF
-  export NERF_MAX_NUM_ITERATIONS=500
   export DATA_DIR="${BASE_DATA_DIR}/${SCENE}"
   export NERF_MODEL="${EXPERIMENT_DIR}/outputs/${EXPERIMENT_NAME}/nerfacto/${EXPERIMENT_NAME}/config.yml"
-
   export POSITION_TENSOR_OUTPUT_NAME="${EXPERIMENT_DIR}/ray_sample.pt"
-  export RAY_SAMPLING_STRATEGY="random"
 
-  mkdir "${EXPERIMENT_DIR}"
+  ## Radsplat paramaters
+  export RAY_SAMPLING_STRATEGY="random"
+  export PERCENTAGE_RANDOM=0.8
+  export NERF_MAX_NUM_ITERATIONS=500
+  export SAMPLING_SIZE=500000
 
   echo "##################### [Job started] #####################"
+  mkdir "${EXPERIMENT_DIR}"
   cd "${EXPERIMENT_DIR}"
 
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] [Training-nerfacto] started"
-
   echo "[nerfacto-start] - $(($(date +%s%N)/1000000))" >> time_logs.txt
+
   ns-train nerfacto \
     --vis tensorboard \
     --experiment-name "${EXPERIMENT_NAME}" \
@@ -62,13 +64,20 @@ for scenename in $scenes;do
     --images-path "${DATA_DIR}/images"
 
   echo "[nerfacto-end] - $(($(date +%s%N)/1000000))" >> time_logs.txt
-
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] [Training-nerfacto] finished"
 
-  export SAMPLING_SIZE=100000
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] [sampling-rays] finished"
   echo "[ray-sampling-start] - $(($(date +%s%N)/1000000))" >> time_logs.txt
-  python ~/ds-lab/RadSplat/nerf_step.py --nerf-folder $NERF_MODEL --output-name $POSITION_TENSOR_OUTPUT_NAME --sampling-size $SAMPLING_SIZE --ray-sampling-strategy $RAY_SAMPLING_STRATEGY 
+
+  python ~/ds-lab/RadSplat/nerf_step.py \
+    --nerf-folder $NERF_MODEL \
+    --output-name $POSITION_TENSOR_OUTPUT_NAME \
+    --sampling-size $SAMPLING_SIZE \
+    --ray-sampling-strategy $RAY_SAMPLING_STRATEGY \
+    --percentage-random $PERCENTAGE_RANDOM
+
   echo "[ray-sampling-end] - $(($(date +%s%N)/1000000))" >> time_logs.txt
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] [sampling-rays] finished"
 
   echo "##################### [FINISHED NERF] #####################"
   echo "##################### [STARTING GSPLAT] #####################"
@@ -125,6 +134,7 @@ for scenename in $scenes;do
     --nerf-steps $NERF_MAX_NUM_ITERATIONS \
     --num-rays $SAMPLING_SIZE \
     --sampling-strategy $RAY_SAMPLING_STRATEGY \
-    --experiment-name $EXPERIMENT_NAME
+    --experiment-name $EXPERIMENT_NAME \
+    --percentage-random $PERCENTAGE_RANDOM
 
 done

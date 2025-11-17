@@ -55,6 +55,14 @@ def create_parser():
         help="scene-name"
     )
 
+    parser.add_argument(
+        "--percentage-random",
+        "-pr",
+        type=float,
+        required=False,
+        help="percentage random for mixedsampling"
+    )
+
     return parser
 
 if __name__ == "__main__":
@@ -71,6 +79,8 @@ if __name__ == "__main__":
             "sampling-strategy" : args.sampling_strategy
         }
 
+    if args.sampling_strategy in ["mixed-sobel", "mixed-canny"]:
+        metadata['percentage-random'] = args.percentage_random 
 
     with open("metadata.json", "w") as f:
         json.dump(metadata, f)

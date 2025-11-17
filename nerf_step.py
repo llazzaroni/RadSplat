@@ -4,7 +4,7 @@ import torch
 import logging
 
 from nerf_models import Nerfacto
-from point_samplers import sobel_edge_detector_sampler, canny_edge_detector_sampler, random_sampler
+from point_samplers import sobel_edge_detector_sampler, canny_edge_detector_sampler, random_sampler, mixed_sampler
 from gs_initializer import Initializer
 from pathlib import Path
 import argparse
@@ -38,7 +38,7 @@ def create_parser():
     parser.add_argument(
         "--sampling-size",
         "-n",
-        type=str,
+        type=int,
         required=True,
         help="number of rays to sample"
     )
@@ -48,7 +48,15 @@ def create_parser():
         "-s",
         type=str,
         required=False,
-        help="name odf the filter to use: canny | sobel"
+        help="name odf the filter to use: canny | sobel | mixed-sobel | mixed-canny"
+    )
+
+    parser.add_argument(
+        "--percentage-random",
+        "-pr",
+        type=float,
+        required=False,
+        help="name odf the filter to use: canny | sobel | mixed-sobel | mixed-canny"
     )
 
     return parser
@@ -67,7 +75,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     folder = args.nerf_folder
-    N_RAYS = int(args.sampling_size)
+    N_RAYS = args.sampling_size
     BATCH_SIZE = 5_000
     RAYS_BATCH_NAME = args.output_name
     n_batches = math.ceil(N_RAYS / BATCH_SIZE)
@@ -84,6 +92,10 @@ if __name__ == "__main__":
         coords = canny_edge_detector_sampler(model.pipeline.datamanager, N_RAYS, model.device)
     elif args.ray_sampling_strategy == "sobel":
         coords = sobel_edge_detector_sampler(model.pipeline.datamanager, N_RAYS, model.device)
+    elif args.ray_sampling_strategy == "mixed-sobel":
+        coords = mixed_sampler(model.pipeline.datamanager, N_RAYS, share_rnd = args.percentage_random, edge_detector = "sobel", device = model.device)
+    elif args.ray_sampling_strategy == "mixed-canny":
+        coords = mixed_sampler(model.pipeline.datamanager, N_RAYS, share_rnd = args.percentage_random, edge_detector = "canny", device = model.device)
     else:
         coords = random_sampler(model.pipeline.datamanager, N_RAYS, model.device)
 

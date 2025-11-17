@@ -186,7 +186,7 @@ def canny_edge_detector_sampler(
 
     return ray_indices
 
-def mixed_sampling(data_manager: DataManager, n : int,  share_rnd : float, edge_detector : str, device : str) -> torch.Tensor:
+def mixed_sampler(data_manager: DataManager, n : int,  share_rnd : float, edge_detector : str, device : str) -> torch.Tensor:
 
     random_saple_size = int(n * share_rnd)
     edge_sample_size = n - random_saple_size
