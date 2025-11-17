@@ -14,12 +14,12 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] [set up env] started"
 
 set +u
 source /work/courses/dslab/team20/miniconda3/etc/profile.d/conda.sh
-conda activate ns50 
+conda activate ns50_ns-upgraded
 set -u
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] [set up env] finished"
 
-scenes="counter"
+scenes="bicycle"
 # scenes="bicycle  bonsai  counter  flowers  garden  kitchen  room  stump  treehill"
 
 export RUNNING_DIR="/work/courses/dslab/team20/rbollati/running_env"
