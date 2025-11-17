@@ -995,7 +995,7 @@ class Runner:
                     training_time = time.time() - global_tic
                     out_path = os.path.join(cfg.result_dir, "time_logs.txt")
                     with open(out_path, "a") as f:
-                        f.write(f"Gaussian Splatting step {step} - {training_time}\n")
+                        f.write(f"[gaussian-splatting-{step}] - {training_time}\n")
 
             # run compression
             if cfg.compression is not None and step in [i - 1 for i in cfg.eval_steps]:
