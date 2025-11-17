@@ -47,6 +47,14 @@ def create_parser():
         help="experiment-name"
     )
 
+    parser.add_argument(
+        "--scene-name",
+        "-n",
+        type=str,
+        required=True,
+        help="scene-name"
+    )
+
     return parser
 
 if __name__ == "__main__":
@@ -56,6 +64,7 @@ if __name__ == "__main__":
 
     metadata = {
             "experiment-name" : args.experiment_name,
+            "scene-name" : atgs.scene_name
             "nerf-model" : args.nerf_model,
             "nerf-steps" : args.nerf_steps,
             "rays-sampled" : args.num_rays,

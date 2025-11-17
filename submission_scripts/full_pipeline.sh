@@ -110,7 +110,9 @@ set -u
 set -euo pipefail
 
 # save experiment metadata
-python ~/ds-lab/RadSplat/utils/save_metadata.py --nerf-model "nerfacto" \
+python ~/ds-lab/RadSplat/utils/save_metadata.py \
+  --nerf-model "nerfacto" \
+  --scene-name $SCENE \
   --nerf-steps $NERF_MAX_NUM_ITERATIONS \
   --num-rays $SAMPLING_SIZE \
   --sampling-stragegy $RAY_SAMPLING_STRATEGY \
