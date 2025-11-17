@@ -58,11 +58,15 @@ def sobel_edge_detector_sampler(
     imgs_shapes = []
     pixels_weights = []
 
+    cameras = data_manager.train_dataset.cameras.to(device)
+    H_all = cameras.height.squeeze(-1).cpu().numpy()
+    W_all = cameras.width.squeeze(-1).cpu().numpy()
+
     for idx in range(len(dataset)):
 
-        img = dataset.get_numpy_image(idx)
-        H, W, _ = img.shape
+        H, W = int(H_all[idx]), int(W_all[idx])
         imgs_shapes.append((H,W))
+        img = dataset.get_numpy_image(idx)
 
         # convert to gray scale
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -73,6 +77,10 @@ def sobel_edge_detector_sampler(
 
         # Compute gradient magnitude
         gradient_magnitude = cv2.magnitude(sobelx, sobely)
+
+        if gradient_magnitude.shape != (H, W):
+            gradient_magnitude = cv2.resize(gradient_magnitude, (W, H))
+
 
         # Convert to uint8
         gradient_magnitude = cv2.convertScaleAbs(gradient_magnitude).ravel()
@@ -100,13 +108,14 @@ def sobel_edge_detector_sampler(
 
         img_indeces = [(x,y) for y in range(H-1, -1, -1) for x in range(W)]
 
+        sample_size = min(len(img_indeces), int(samples_per_image[ind]))
+
         sampled_indeces = np.random.choice(
             len(img_indeces),
-            size = int(samples_per_image[ind]),
+            size = sample_size,
             p = weights,
             replace = False
         )
-
 
         for s_ind in sampled_indeces:
             x.append(img_indeces[s_ind][0])
@@ -130,11 +139,15 @@ def canny_edge_detector_sampler(
     imgs_shapes = []
     pixels_weights = []
 
+    cameras = data_manager.train_dataset.cameras.to(device)
+    H_all = cameras.height.squeeze(-1).cpu().numpy()
+    W_all = cameras.width.squeeze(-1).cpu().numpy()
+
     for idx in range(len(dataset)):
 
-        img = dataset.get_numpy_image(idx)
-        H, W, _ = img.shape
+        H, W = int(H_all[idx]), int(W_all[idx])
         imgs_shapes.append((H,W))
+        img = dataset.get_numpy_image(idx)
 
         # convert to gray scale
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -143,7 +156,12 @@ def canny_edge_detector_sampler(
         edges = cv2.Canny(img, threshold1=25, threshold2=60)
 
         # Convert to uint8
-        gradient_magnitude = cv2.convertScaleAbs(edges).ravel()
+        gradient_magnitude = cv2.convertScaleAbs(edges)
+
+        if gradient_magnitude.shape != (H, W):
+            gradient_magnitude = cv2.resize(gradient_magnitude, (W, H))
+
+        gradient_magnitude = gradient_magnitude.ravel()
 
         # Normalize
         gradient_magnitude = gradient_magnitude / 255
@@ -152,6 +170,7 @@ def canny_edge_detector_sampler(
         # smoothed = cv2.GaussianBlur(gradient_magnitude, (5, 5), 0).ravel()
 
         img_weights[idx] = gradient_magnitude.sum()
+        # TODO hanhandle case sum is 0
         normalized = gradient_magnitude / gradient_magnitude.sum()
         pixels_weights.append(normalized)
 
@@ -168,13 +187,14 @@ def canny_edge_detector_sampler(
 
         img_indeces = [(x,y) for y in range(H-1, -1, -1) for x in range(W)]
 
+        sample_size = min(len(img_indeces), int(samples_per_image[ind]))
+
         sampled_indeces = np.random.choice(
             len(img_indeces),
-            size = int(samples_per_image[ind]),
+            size = sample_size,
             p = weights,
             replace = False
         )
-
 
         for s_ind in sampled_indeces:
             x.append(img_indeces[s_ind][0])
@@ -198,11 +218,6 @@ def mixed_sampler(data_manager: DataManager, n : int,  share_rnd : float, edge_d
     else:
         edge_sample = sobel_edge_detector_sampler(data_manager, edge_sample_size, device)
 
-
     concatenated = torch.cat([rnd_sample, edge_sample], dim=0)
 
     return concatenated
-
-
-
-
