@@ -19,7 +19,7 @@ set -u
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] [set up env] finished"
 
-scenes="bonsai"
+scenes="counter"
 # scenes="bicycle  bonsai  counter  flowers  garden  kitchen  room  stump  treehill"
 
 export RUNNING_DIR="/work/courses/dslab/team20/rbollati/running_env"
@@ -126,7 +126,7 @@ for scenename in $scenes;do
     --scene-name $SCENE \
     --nerf-steps $NERF_MAX_NUM_ITERATIONS \
     --num-rays $SAMPLING_SIZE \
-    --sampling-stragegy $RAY_SAMPLING_STRATEGY \
+    --sampling-strategy $RAY_SAMPLING_STRATEGY \
     --experiment-name $EXPERIMENT_NAME
 
 done
