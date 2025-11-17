@@ -19,7 +19,8 @@ set -u
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] [set up env] finished"
 
-scenes="bicycle  bonsai  counter  flowers  garden  kitchen  room  stump  treehill"
+scenes="bonsai"
+# scenes="bicycle  bonsai  counter  flowers  garden  kitchen  room  stump  treehill"
 
 export RUNNING_DIR="/work/courses/dslab/team20/rbollati/running_env"
 export BASE_DATA_DIR="/work/courses/dslab/team20/data/mipnerf360"
@@ -30,7 +31,7 @@ for scenename in $scenes;do
 
   export SCENE=$scenename
 
-  export EXPERIMENT_NAME="$(date '+%Y%m%d_%H%M%S')_{$SCENE}"
+  export EXPERIMENT_NAME="$(date '+%Y%m%d_%H%M%S')_${SCENE}"
   export EXPERIMENT_DIR="${RUNNING_DIR}/experiments/${EXPERIMENT_NAME}"
 
   ## PARAMETERS NERF
@@ -39,7 +40,7 @@ for scenename in $scenes;do
   export NERF_MODEL="${EXPERIMENT_DIR}/outputs/${EXPERIMENT_NAME}/nerfacto/${EXPERIMENT_NAME}/config.yml"
 
   export POSITION_TENSOR_OUTPUT_NAME="${EXPERIMENT_DIR}/ray_sample.pt"
-  export RAY_SAMPLING_STRATEGY="canny"
+  export RAY_SAMPLING_STRATEGY="random"
 
   mkdir "${EXPERIMENT_DIR}"
 
@@ -48,6 +49,7 @@ for scenename in $scenes;do
 
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] [Training-nerfacto] started"
 
+  echo "[nerfacto-start] - $(($(date +%s%N)/1000000))" >> time_logs.txt
   ns-train nerfacto \
     --vis tensorboard \
     --experiment-name "${EXPERIMENT_NAME}" \
@@ -61,12 +63,14 @@ for scenename in $scenes;do
     --colmap-path "${DATA_DIR}/sparse/0" \
     --images-path "${DATA_DIR}/images"
 
+  echo "[nerfacto-end] - $(($(date +%s%N)/1000000))" >> time_logs.txt
+
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] [Training-nerfacto] finished"
 
   export SAMPLING_SIZE=100000
-  START_SAMPLING=$(($(date +%s)*1000))
+  echo "[ray-sampling-start] - $(($(date +%s%N)/1000000))" >> time_logs.txt
   python ~/ds-lab/RadSplat/nerf_step.py --nerf-folder $NERF_MODEL --output-name $POSITION_TENSOR_OUTPUT_NAME --sampling-size $SAMPLING_SIZE --ray-sampling-strategy $RAY_SAMPLING_STRATEGY 
-  END_SAMPLING=$(($(date +%s)*1000))
+  echo "[ray-sampling-end] - $(($(date +%s%N)/1000000))" >> time_logs.txt
 
   echo "##################### [FINISHED NERF] #####################"
   echo "##################### [STARTING GSPLAT] #####################"

@@ -64,7 +64,7 @@ if __name__ == "__main__":
 
     metadata = {
             "experiment-name" : args.experiment_name,
-            "scene-name" : args.scene_name
+            "scene-name" : args.scene_name,
             "nerf-model" : args.nerf_model,
             "nerf-steps" : args.nerf_steps,
             "rays-sampled" : args.num_rays,
