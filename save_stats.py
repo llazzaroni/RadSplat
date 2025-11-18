@@ -255,7 +255,7 @@ def _norm_name(p: str) -> str:
 
 def create_splats_with_optimizers(
     parser: Parser,
-    payload,
+    cfg,
     nerf_init,
     init_type: str = "sfm",
     init_num_pts: int = 100_000,
@@ -280,7 +280,9 @@ def create_splats_with_optimizers(
 ) -> Tuple[torch.nn.ParameterDict, Dict[str, torch.optim.Optimizer]]:
     
     if nerf_init:
-        # num_points = len(torch.from_numpy(parser.points).float())
+        # num_points = len(torch.from_numpy(parser.points).float()
+        payload = torch.load(cfg.pt_path, map_location="cuda")
+
         xyzrgb = payload["xyzrgb"].detach().cpu().numpy()
         num_points = len(xyzrgb)
         C_nerf_all = payload["camera_to_worlds"][:, :3, 3].detach().cpu().numpy()
@@ -403,7 +405,7 @@ class Runner:
     """Engine for training and testing."""
 
     def __init__(
-        self, local_rank: int, world_rank, world_size: int, cfg: Config, payload
+        self, local_rank: int, world_rank, world_size: int, cfg: Config
     ) -> None:
         set_random_seed(42 + local_rank)
 
@@ -452,7 +454,7 @@ class Runner:
         feature_dim = 32 if cfg.app_opt else None
         self.splats, self.optimizers = create_splats_with_optimizers(
             self.parser,
-            payload=payload,
+            cfg=self.cfg,
             nerf_init=cfg.nerf_init,
             init_type=cfg.init_type,
             init_num_pts=cfg.init_num_pts,
@@ -1360,7 +1362,7 @@ def main(local_rank: int, world_rank, world_size: int, cfg: Config):
         if world_rank == 0:
             print("Viewer is disabled in distributed training.")
     
-    payload = torch.load(cfg.pt_path, map_location="cuda")
+    #payload = torch.load(cfg.pt_path, map_location="cuda")
 
     cfg.result_dir = os.path.abspath(os.path.expanduser(cfg.result_dir))
     print("DEBUG result_dir:", cfg.result_dir, file=sys.stderr)
@@ -1369,7 +1371,7 @@ def main(local_rank: int, world_rank, world_size: int, cfg: Config):
                         "Pass a user-writable directory with --result_dir.")
     os.makedirs(cfg.result_dir, exist_ok=True)
 
-    runner = Runner(local_rank, world_rank, world_size, cfg, payload)
+    runner = Runner(local_rank, world_rank, world_size, cfg)
 
     if cfg.save_first_ckp:
         runner.save_ckpt()
