@@ -52,7 +52,7 @@ class Config:
     # Disable viewer
     disable_viewer: bool = False
     # Path to the .pt files. If provide, it will skip training and run evaluation only.
-    #ckpt: Optional[List[str]] = None
+    ckpt: Optional[List[str]] = None
 
     save_first_ckp: bool = False
     nerf_init: bool = True
@@ -1373,26 +1373,26 @@ def main(local_rank: int, world_rank, world_size: int, cfg: Config):
 
     runner = Runner(local_rank, world_rank, world_size, cfg)
 
-    if cfg.save_first_ckp:
-        runner.save_ckpt()
-        # ckpts = [
-        #     torch.load(file, map_location=runner.device, weights_only=True)
-        #     for file in cfg.ckpt
-        # ]
-        # for k in runner.splats.keys():
-        #     runner.splats[k].data = torch.cat([ckpt["splats"][k] for ckpt in ckpts])
-        # step = ckpts[0]["step"]
-        # runner.eval(step=step)
-        # runner.render_traj(step=step)
-        # if cfg.compression is not None:
-        #     runner.run_compression(step=step)
-
-    runner.train()
-
-    Path(cfg.result_dir).mkdir(exist_ok=True)
-    out_path = os.path.join(cfg.result_dir, "gsplat_stats.json")
-    with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(runner.stats_arr, f, indent=2, ensure_ascii=False)
+    if cfg.ckpt:
+        ckpts = [
+            torch.load(file, map_location=runner.device, weights_only=True)
+            for file in cfg.ckpt
+        ]
+        for k in runner.splats.keys():
+            runner.splats[k].data = torch.cat([ckpt["splats"][k] for ckpt in ckpts])
+        step = ckpts[0]["step"]
+        runner.eval(step=step)
+        runner.render_traj(step=step)
+        if cfg.compression is not None:
+            runner.run_compression(step=step)
+    else:
+        if cfg.save_first_ckp:
+            runner.save_ckpt()
+        runner.train()
+        Path(cfg.result_dir).mkdir(exist_ok=True)
+        out_path = os.path.join(cfg.result_dir, "gsplat_stats.json")
+        with open(out_path, "w", encoding="utf-8") as f:
+            json.dump(runner.stats_arr, f, indent=2, ensure_ascii=False)
 
     if not cfg.disable_viewer:
         runner.viewer.complete()

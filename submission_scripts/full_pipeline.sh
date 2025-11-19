@@ -10,7 +10,7 @@
 # FULL pipeline to run nerfacto and sample points 
 ###############################################################
 
-scenes="bicycle  bonsai  counter  flowers  garden  kitchen  room  stump  treehill"
+scenes="stump  treehill"
 
 export RUNNING_DIR="/work/courses/dslab/team20/rbollati/running_env"
 export BASE_DATA_DIR="/work/courses/dslab/team20/data/mipnerf360"
@@ -39,7 +39,7 @@ for scenename in $scenes;do
   ## Radsplat paramaters
   export RAY_SAMPLING_STRATEGY="random"
   export PERCENTAGE_RANDOM=0.8
-  export NERF_MAX_NUM_ITERATIONS=500
+  export NERF_MAX_NUM_ITERATIONS=5000
   export SAMPLING_SIZE=1000000
 
   echo "##################### [Job started] #####################"
