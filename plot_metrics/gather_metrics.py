@@ -4,16 +4,16 @@ import shutil
 FOLDER = "/work/courses/dslab/team20/rbollati/running_env/experiments"
 errors = []
 
-# for ind, i in enumerate(os.listdir(FOLDER)):
-#
-#     print(f"copying: {i}")
-#
-#     if 'gsplat_stats.json' in os.listdir(f"{FOLDER}/{i}") and 'time_logs.txt' in os.listdir(f"{FOLDER}/{i}") and 'metadata.json' in os.listdir(f"{FOLDER}/{i}"):
-#         os.mkdir(f"experiments_results/{ind}")
-#         for name in ["gsplat_stats.json","time_logs.txt","metadata.json"]:
-#             shutil.copy(f"{FOLDER}/{i}/{name}",f"experiments_results/{ind}/{name}" )
-#     else:
-#         errors.append(i)
+for ind, i in enumerate(os.listdir(FOLDER)):
+
+    print(f"copying: {i}")
+
+    if 'gsplat_stats.json' in os.listdir(f"{FOLDER}/{i}") and 'time_logs.txt' in os.listdir(f"{FOLDER}/{i}") and 'metadata.json' in os.listdir(f"{FOLDER}/{i}"):
+        os.mkdir(f"experiments_results/{ind}")
+        for name in ["gsplat_stats.json","time_logs.txt","metadata.json"]:
+            shutil.copy(f"{FOLDER}/{i}/{name}",f"experiments_results/{ind}/{name}" )
+    else:
+        errors.append(i)
 
 matches = [
     d for d in os.listdir(FOLDER)

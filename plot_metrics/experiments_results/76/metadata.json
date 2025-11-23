@@ -1,0 +1,1 @@
+{"experiment-name": "20251117_191956_room", "scene-name": "room", "nerf-model": "nerfacto", "nerf-steps": 1000, "rays-sampled": 500000, "sampling-strategy": "random"}

@@ -1,0 +1,96 @@
+import matplotlib.pyplot as plt
+import json
+import pandas as pd
+from utils import create_sfm_df, create_complete_df
+import seaborn as sns
+import numpy as np
+import argparse
+from pathlib import Path
+
+def rescaled_x(n, end=5000):
+    if n <= 1:
+        return np.array([0.0])
+    return np.arange(n, dtype=float) * (end / (n - 1))
+
+
+def main(args):
+    exp_df = create_complete_df("experiments_results")
+    sfm_df = create_sfm_df("experiments_results")
+
+    nerf_steps = exp_df["nerf-steps"].unique()
+    rays_sampled = exp_df["rays-sampled"].unique()
+    sampling_strategy = exp_df["sampling-strategy"].unique()
+    percentage_random = exp_df["percentage-random"].unique()
+
+    plt.figure(figsize=(8, 4.5))
+
+    for nerf_steps_value in nerf_steps:
+        for rays_sampled_value in rays_sampled:
+            for sampling_strategy_value in sampling_strategy:
+                if sampling_strategy_value == "random"  or sampling_strategy_value == "canny" or sampling_strategy_value == "sobel":
+                    if sampling_strategy_value == "random" and args.random == False:
+                        continue
+                    if sampling_strategy_value == "canny" and args.canny == False:
+                        continue
+                    if sampling_strategy_value == "sobel" and args.sobel == False:
+                        continue
+                    df_loop = exp_df[(exp_df["nerf-steps"] == nerf_steps_value) & (exp_df["rays-sampled"] == rays_sampled_value) & (exp_df["sampling-strategy"] == sampling_strategy_value)]
+                
+                    metric_cols = ["ssim", "psnr", "lpips"]
+                
+                    agg = df_loop.groupby("step")[metric_cols].mean()
+                    
+                    y = agg[args.metric].to_numpy()
+                    if len(y) == 0:
+                        continue
+                    x = rescaled_x(len(y), 5000)
+                    
+                    plt.plot(x, y, marker="o", label=str(nerf_steps_value) + " " + str(rays_sampled_value) + " " + str(sampling_strategy_value))
+                else:
+                    if sampling_strategy_value == "mixed-canny" and args.canny_mixed == False:
+                        continue
+                    if sampling_strategy_value == "mixed-sobel" and args.sobel_mixed == False:
+                        continue
+                    for percentage_random_value in percentage_random:
+                        df_loop = exp_df[(exp_df["nerf-steps"] == nerf_steps_value) & (exp_df["rays-sampled"] == rays_sampled_value) & (exp_df["sampling-strategy"] == sampling_strategy_value) & (exp_df["percentage-random"] == percentage_random_value)]
+                
+                        metric_cols = ["ssim", "psnr", "lpips"]
+                    
+                        agg = df_loop.groupby("step")[metric_cols].mean()
+                        
+                        y = agg[args.metric].to_numpy()
+                        if len(y) == 0:
+                            continue
+                        x = rescaled_x(len(y), 5000)
+                        plt.plot(x, y, marker="o", label=str(nerf_steps_value) + " " + str(rays_sampled_value) + " " + str(sampling_strategy_value) + " " + str(percentage_random[0]))
+    
+                    
+    metric_cols = ["ssim", "psnr", "lpips"]
+
+    agg = sfm_df.groupby("step")[metric_cols].mean()
+    
+    y = agg[args.metric].to_numpy()
+    x = rescaled_x(len(y), 5000)
+    plt.plot(x, y, marker="o", label="SFM")
+
+
+    plt.xlim(0, 5000)
+    plt.title("ssim over records")
+    plt.xlabel("Record index")
+    plt.ylabel("SSIM")
+    plt.grid(True, alpha=0.3)
+    plt.legend(title="Source")
+    plt.tight_layout()
+    plt.savefig(Path("/home/llazzaroni/ds-lab/RadSplat/plot_metrics/img1"), dpi=150)
+
+
+if __name__ == "__main__":
+    p = argparse.ArgumentParser(description="Build cycling winners dataset.")
+    p.add_argument("--metric", default="ssim")
+    p.add_argument("--random", default=True)
+    p.add_argument("--sobel", default=False)
+    p.add_argument("--canny", default=False)
+    p.add_argument("--sobel-mixed", default=False)
+    p.add_argument("--canny-mixed", default=False)
+    args = p.parse_args()
+    main(args)

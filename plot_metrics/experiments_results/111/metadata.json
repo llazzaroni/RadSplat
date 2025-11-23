@@ -1,0 +1,1 @@
+{"experiment-name": "20251118_000748_counter", "scene-name": "counter", "nerf-model": "nerfacto", "nerf-steps": 500, "rays-sampled": 500000, "sampling-strategy": "mixed-sobel", "percentage-random": 0.6}
