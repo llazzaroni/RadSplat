@@ -27,6 +27,8 @@ def main(args):
     iterations = [int(c) for c in args.iterations]
     points = [int(c) for c in args.points]
 
+    length_plot = int(args.len_plot)
+
     for nerf_steps_value in nerf_steps:
         if nerf_steps_value not in set(iterations):
             continue
@@ -45,16 +47,27 @@ def main(args):
 
                     df_loop = df_loop[df_loop["scene-name"].isin(set(args.scenes))]
 
+                    df_loop = df_loop[df_loop["step"] < length_plot]
+
                     metric_cols = ["ssim", "psnr", "lpips"]
+
+                    agg_scenes = (
+                        df_loop
+                        .groupby(["scene-name", "step"])[metric_cols]
+                        .mean()
+                    )
+
+                    print(len(df_loop), len(agg_scenes), nerf_steps_value)
                 
-                    agg = df_loop.groupby("step")[metric_cols].mean()
+                    agg = agg_scenes.groupby("step")[metric_cols].mean()
                     
                     y = agg[args.metric].to_numpy()
                     if len(y) == 0:
                         continue
                     x = rescaled_x(len(y), len(y) * 100)
                     
-                    plt.plot(x, y, marker="o", label=str(nerf_steps_value) + " " + str(rays_sampled_value) + " " + str(sampling_strategy_value))
+                    plt.plot(x, y, marker="o", label="nerf steps: " + str(nerf_steps_value) + "; number of points: " + str(rays_sampled_value) + "; strategy: " + str(sampling_strategy_value))
+                    #plt.plot(x, y, label="nerf steps: " + str(nerf_steps_value) + "; number of points: " + str(rays_sampled_value) + "; strategy: " + str(sampling_strategy_value))
                 else:
                     if sampling_strategy_value == "mixed-canny" and args.canny_mixed == False:
                         continue
@@ -62,37 +75,66 @@ def main(args):
                         continue
                     for percentage_random_value in percentage_random:
                         df_loop = exp_df[(exp_df["nerf-steps"] == nerf_steps_value) & (exp_df["rays-sampled"] == rays_sampled_value) & (exp_df["sampling-strategy"] == sampling_strategy_value) & (exp_df["percentage-random"] == percentage_random_value)]
-
+                    
                         df_loop = df_loop[df_loop["scene-name"].isin(set(args.scenes))]
+
+                        df_loop = df_loop[df_loop["step"] <= length_plot]
 
                         metric_cols = ["ssim", "psnr", "lpips"]
                     
-                        agg = df_loop.groupby("step")[metric_cols].mean()
+                        agg_scenes = (
+                            df_loop
+                            .groupby(["scene-name", "step"])[metric_cols]
+                            .mean()
+                        )
+
+                        print(len(df_loop), len(agg_scenes), nerf_steps_value)
+                    
+                        agg = agg_scenes.groupby("step")[metric_cols].mean()
                         
                         y = agg[args.metric].to_numpy()
                         if len(y) == 0:
                             continue
-                        x = rescaled_x(len(y), 30000)
-                        plt.plot(x, y, marker="o", label=str(nerf_steps_value) + " " + str(rays_sampled_value) + " " + str(sampling_strategy_value) + " " + str(percentage_random[0]))
+
+                        x = rescaled_x(len(y), len(y) * 100)
+                        plt.plot(x, y, marker="o", label="nerf steps: " + str(nerf_steps_value) + "; points: " + str(rays_sampled_value) + "; strategy: " + str(sampling_strategy_value) + "; percentage: " + str(percentage_random_value))
+                        #plt.plot(x, y, label=str(nerf_steps_value) + " " + str(rays_sampled_value) + " " + str(sampling_strategy_value) + " " + str(percentage_random[0]))
+
                     
     metric_cols = ["ssim", "psnr", "lpips"]
-    
     sfm_df = sfm_df[sfm_df["scene-name"].isin(set(args.scenes))]
-    agg = sfm_df.groupby("step")[metric_cols].mean()
+    sfm_df = sfm_df[sfm_df["step"] < length_plot]
+    agg_scenes = (
+        sfm_df
+        .groupby(["scene-name", "step"])[metric_cols]
+        .mean()
+    )
+    print(len(sfm_df), len(agg_scenes))
+    agg = agg_scenes.groupby("step")[metric_cols].mean()
     
     y = agg[args.metric].to_numpy()
     x = rescaled_x(len(y), len(y) * 100)
     plt.plot(x, y, marker="o", label="SFM")
+    #plt.plot(x, y, label="SFM")
 
 
     plt.xlim(0, int(args.len_plot))
-    plt.title("ssim over records")
+    plt.title(args.metric + " over records")
     plt.xlabel("Record index")
-    plt.ylabel("SSIM")
+    plt.ylabel(args.metric)
     plt.grid(True, alpha=0.3)
-    plt.legend(title="Source")
+    plt.legend(
+        title="Source",
+        fontsize="small",
+        title_fontsize="small",
+        markerscale=0.7,
+        handlelength=1.0,
+        handletextpad=0.3,
+        borderpad=0.2,
+        labelspacing=0.2
+    )
     plt.tight_layout()
-    plt.savefig(Path("/home/llazzaroni/ds-lab/RadSplat/plot_metrics/img1"), dpi=150)
+    plt.savefig(Path("/home/llazzaroni/ds-lab/RadSplat/plot_metrics/plots/img1"), dpi=150)
 
 
 if __name__ == "__main__":

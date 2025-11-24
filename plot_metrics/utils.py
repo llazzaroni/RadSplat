@@ -57,8 +57,9 @@ def create_complete_df(folder):
 def create_sfm_df(folder : str):
 
     matches = [
-    d for d in os.listdir(folder)
-    if d.startswith("SFM") and os.path.isdir(os.path.join(folder, d))]
+        d for d in os.listdir(folder)
+        if d.startswith("SFM") and os.path.isdir(os.path.join(folder, d))
+    ]
     complete_df = pd.DataFrame()
 
     for i in matches:
@@ -69,7 +70,10 @@ def create_sfm_df(folder : str):
         time_logs = parse_time_log(f"{folder}/{i}/time_logs.txt")
         time_logs_df = pd.DataFrame(time_logs)
         sub_df = pd.concat([gs_splt_stats, time_logs_df], axis=1)
-        sub_df["scene-name"] = i.split('_')[-1] 
+        if len(i.split('_')) == 2:
+            sub_df["scene-name"] = i.split('_')[-1]
+        if len(i.split('_')) == 3:
+            sub_df["scene-name"] = i.split('_')[1]
         complete_df = pd.concat([complete_df, sub_df], axis=0)
 
     return complete_df
