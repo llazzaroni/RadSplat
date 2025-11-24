@@ -1,1 +1,0 @@
-{"experiment-name": "20251118_134546_bonsai", "scene-name": "bonsai", "nerf-model": "nerfacto", "nerf-steps": 5000, "rays-sampled": 1000000, "sampling-strategy": "random"}

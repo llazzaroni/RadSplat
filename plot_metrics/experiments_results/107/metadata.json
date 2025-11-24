@@ -1,1 +1,0 @@
-{"experiment-name": "20251118_005454_treehill", "scene-name": "treehill", "nerf-model": "nerfacto", "nerf-steps": 500, "rays-sampled": 500000, "sampling-strategy": "mixed-sobel", "percentage-random": 0.6}

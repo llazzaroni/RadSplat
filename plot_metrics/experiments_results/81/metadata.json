@@ -1,1 +1,0 @@
-{"experiment-name": "20251118_110734_flowers", "scene-name": "flowers", "nerf-model": "nerfacto", "nerf-steps": 500, "rays-sampled": 500000, "sampling-strategy": "sobel"}

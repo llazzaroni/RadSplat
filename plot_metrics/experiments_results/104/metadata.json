@@ -1,1 +1,0 @@
-{"experiment-name": "20251117_212844_bicycle", "scene-name": "bicycle", "nerf-model": "nerfacto", "nerf-steps": 1000, "rays-sampled": 1000000, "sampling-strategy": "random"}

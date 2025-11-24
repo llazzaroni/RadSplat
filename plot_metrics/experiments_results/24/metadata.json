@@ -1,1 +1,0 @@
-{"experiment-name": "20251118_093456_stump", "scene-name": "stump", "nerf-model": "nerfacto", "nerf-steps": 500, "rays-sampled": 500000, "sampling-strategy": "canny"}

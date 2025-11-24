@@ -1,1 +1,0 @@
-{"experiment-name": "20251117_194608_kitchen", "scene-name": "kitchen", "nerf-model": "nerfacto", "nerf-steps": 500, "rays-sampled": 500000, "sampling-strategy": "mixed-canny", "percentage-random": 0.8}

@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --time=01:40:00
+#SBATCH --time=08:00:00
 #SBATCH --account=dslab_jobs
 #SBATCH --job-name=nerf-train
 #SBATCH -o logs/nerf_%j.out
@@ -10,7 +10,7 @@
 # FULL pipeline to run nerfacto and sample points 
 ###############################################################
 
-scenes="bicycle bonsai counter flowers garden kitchen room"
+scenes="flowers bicycle"
 
 export RUNNING_DIR="/work/courses/dslab/team20/rbollati/running_env"
 export BASE_DATA_DIR="/work/courses/dslab/team20/data/mipnerf360"
@@ -39,8 +39,9 @@ for scenename in $scenes;do
   ## Radsplat paramaters
   export RAY_SAMPLING_STRATEGY="random"
   export PERCENTAGE_RANDOM=0.8
-  export NERF_MAX_NUM_ITERATIONS=10000
+  export NERF_MAX_NUM_ITERATIONS=2500
   export SAMPLING_SIZE=1000000
+  export STEPS_GS=30000
 
   echo "##################### [Job started] #####################"
   mkdir "${EXPERIMENT_DIR}"
@@ -118,7 +119,8 @@ for scenename in $scenes;do
     --data-factor "$DATA_FACTOR" \
     --render-traj-path "$RENDER_TRAJ_PATH" \
     --data-dir "$DATA_DIR/" \
-    --result-dir "$EXPERIMENT_DIR/"
+    --result-dir "$EXPERIMENT_DIR/" \
+    --max-steps "$STEPS_GS"
 
   set +u
   conda deactivate

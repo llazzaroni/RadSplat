@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --time=01:20:00
+#SBATCH --time=02:30:00
 #SBATCH --account=dslab_jobs
 #SBATCH --job-name=nerf-train
 #SBATCH -o logs/nerf_%j.out
@@ -32,7 +32,7 @@ git+https://github.com/rahul-goel/fused-ssim@328dc9836f513d00c4b5bc38fe30478b443
 
 echo "------------------ ENVIRONMENT BUILT --------------------"
 
-scenes="bicycle  bonsai  counter  flowers  garden  kitchen  room  stump  treehill"
+scenes="bicycle flowers"
 
 export RUNNING_DIR="/work/courses/dslab/team20/rbollati/running_env"
 export BASE_DATA_DIR="/work/courses/dslab/team20/data/mipnerf360"
@@ -48,6 +48,7 @@ for scenename in $scenes;do
   export EXPERIMENT_DIR="${RUNNING_DIR}/experiments/${EXPERIMENT_NAME}"
   export DATA_DIR="${BASE_DATA_DIR}/${SCENE}"
   export NERF_MODEL="${EXPERIMENT_DIR}/outputs/${EXPERIMENT_NAME}/nerfacto/${EXPERIMENT_NAME}/config.yml"
+  export STEPS_GS=30000
 
   echo "##################### [Job started] #####################"
   mkdir "${EXPERIMENT_DIR}"
@@ -67,6 +68,7 @@ for scenename in $scenes;do
     --data-factor "$DATA_FACTOR" \
     --render-traj-path "$RENDER_TRAJ_PATH" \
     --data-dir "$DATA_DIR/" \
-    --result-dir "$EXPERIMENT_DIR/"
+    --result-dir "$EXPERIMENT_DIR/" \
+    --max-steps "$STEPS_GS"
 
 done
