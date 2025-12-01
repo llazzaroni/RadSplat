@@ -37,11 +37,11 @@ def main(args):
                 continue
             for sampling_strategy_value in sampling_strategy:
                 if sampling_strategy_value == "random"  or sampling_strategy_value == "canny" or sampling_strategy_value == "sobel":
-                    if sampling_strategy_value == "random" and args.random == False:
+                    if sampling_strategy_value == "random" and bool(args.random) == False:
                         continue
-                    if sampling_strategy_value == "canny" and args.canny == False:
+                    if sampling_strategy_value == "canny" and bool(args.canny) == False:
                         continue
-                    if sampling_strategy_value == "sobel" and args.sobel == False:
+                    if sampling_strategy_value == "sobel" and bool(args.sobel) == False:
                         continue
                     df_loop = exp_df[(exp_df["nerf-steps"] == nerf_steps_value) & (exp_df["rays-sampled"] == rays_sampled_value) & (exp_df["sampling-strategy"] == sampling_strategy_value)]
 
@@ -64,6 +64,7 @@ def main(args):
                     y = agg[args.metric].to_numpy()
                     if len(y) == 0:
                         continue
+
                     x = rescaled_x(len(y), len(y) * 100)
                     
                     plt.plot(x, y, marker="o", label="nerf steps: " + str(nerf_steps_value) + "; number of points: " + str(rays_sampled_value) + "; strategy: " + str(sampling_strategy_value))
@@ -79,6 +80,8 @@ def main(args):
                         df_loop = df_loop[df_loop["scene-name"].isin(set(args.scenes))]
 
                         df_loop = df_loop[df_loop["step"] <= length_plot]
+
+                        print(df_loop["scene-name"].unique())
 
                         metric_cols = ["ssim", "psnr", "lpips"]
                     
@@ -134,17 +137,17 @@ def main(args):
         labelspacing=0.2
     )
     plt.tight_layout()
-    plt.savefig(Path("/home/llazzaroni/ds-lab/RadSplat/plot_metrics/plots/img1"), dpi=150)
+    plt.savefig(Path("/home/llazzaroni/ds-lab/RadSplat/plot_metrics/plots/img17"), dpi=150)
 
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description="Build cycling winners dataset.")
     p.add_argument("--metric", default="ssim")
-    p.add_argument("--random", default=True)
-    p.add_argument("--sobel", default=False)
-    p.add_argument("--canny", default=False)
-    p.add_argument("--sobel-mixed", default=False)
-    p.add_argument("--canny-mixed", default=False)
+    p.add_argument("--random", action="store_true", default=False)
+    p.add_argument("--sobel", action="store_true", default=False)
+    p.add_argument("--canny", action="store_true", default=False)
+    p.add_argument("--sobel-mixed", action="store_true", default=False)
+    p.add_argument("--canny-mixed", action="store_true", default=False)
     p.add_argument(
         "--scenes",
         nargs="+",

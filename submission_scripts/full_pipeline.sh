@@ -37,11 +37,11 @@ for scenename in $scenes;do
   export POSITION_TENSOR_OUTPUT_NAME="${EXPERIMENT_DIR}/ray_sample.pt"
 
   ## Radsplat paramaters
-  export RAY_SAMPLING_STRATEGY="random"
+  export RAY_SAMPLING_STRATEGY="mixed-sobel"
   export PERCENTAGE_RANDOM=0.8
   export NERF_MAX_NUM_ITERATIONS=2500
   export SAMPLING_SIZE=1000000
-  export STEPS_GS=30000
+  export STEPS_GS=5000
 
   echo "##################### [Job started] #####################"
   mkdir "${EXPERIMENT_DIR}"

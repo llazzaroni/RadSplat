@@ -28,7 +28,7 @@ warnings.filterwarnings(
     message="Using a non-tuple sequence for multidimensional indexing is deprecated",
 )
 
-class Nerfacto:
+class Nerfacto_uniform:
 
     def __init__(self, config_file_path: str):
         """
@@ -45,6 +45,13 @@ class Nerfacto:
         self.pipeline, self.model = self._load_model()
         # set device based on configs (GPU / CPU)
         self.device = next(self.model.parameters()).device
+
+        # Temporaneo
+        self.sampler = UniformSampler(
+            num_samples=100,
+            train_stratified=False,   # optional, to avoid randomness in eval
+            single_jitter=False,
+        )
 
         logging.info(f"Model interface initialized succesfully - device: {self.device}")
 
@@ -107,32 +114,8 @@ class Nerfacto:
         rays = self.model.collider.set_nears_and_fars(ray_bundle)
 
         return rays.to(self.device)
-
-    def sample_points(self, rays : RayBundle):
-        """
-        Sample points along the given rays, The sampler used is a SpacedSampler
-
-        :Param rays -> (RayBundle) The rays to sample
-        :Param num_sample -> (int) Number of sample to generate per ray
-
-        :Return RaySamples
-        """
-
-        # rays = rays.to(self.device)
-        #
-        # sampler = SpacedSampler(
-        #             spacing_fn= lambda x : x,
-        #             spacing_fn_inv= lambda x : x,
-        #             num_samples= 10
-        #         ) 
-        # 
-        # sampled = sampler.generate_ray_samples(rays, num_samples)
-
-        ray_samples, weights_list, ray_samples_list = self.model.proposal_sampler(rays, density_fns=self.model.density_fns)
-
-        return ray_samples.to(self.device)
     
-    def sample_points_uniform(self, rays: RayBundle, num_samples: int = 250, max_dist: float = 3.0):
+    def sample_points_uniform(self, rays: RayBundle, num_samples: int = 100, max_dist: float = 8.0):
         rays = rays.to(self.device)
 
         # linspace in *euclidean* depth
