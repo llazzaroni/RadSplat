@@ -1,3 +1,5 @@
+# File for making the plots; highlights in red the points that are selected as the peaks
+
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path

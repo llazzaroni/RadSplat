@@ -326,8 +326,8 @@ def create_splats_with_optimizers(
 
         points = torch.from_numpy(xyzrgb_aligned[:num_points, :3]).float().to(device)
         rgbs   = torch.from_numpy(xyzrgb_aligned[:num_points, 3:6]).float().to(device)
-        if rgbs.max() > 1.0:
-            rgbs = rgbs / 255.0
+        #if rgbs.max() > 1.0:
+        #    rgbs = rgbs / 255.0
 
         # Initialize the GS size to be the average dist of the 3 nearest neighbors
         dist2_avg = (knn(points, 2)[:, 1:] ** 2).mean(dim=-1)  # [N,]

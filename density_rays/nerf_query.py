@@ -1,3 +1,5 @@
+# File for testing the algorithm. Outputs the densities and transmittances in npy files inside of data
+
 import warnings
 import math
 import torch

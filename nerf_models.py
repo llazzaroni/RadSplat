@@ -37,16 +37,18 @@ class Nerfacto:
         :Param config_file_path -> (str) path to the config file
         """
 
-        logging.info("Model interface initialization")
+        print("[Nerfacto] __init__ started", flush=True)
 
         self.config_file_path = Path(config_file_path)
 
         # load model and pipeline
+        print("[Nerfacto] calling eval_setup", flush=True)
         self.pipeline, self.model = self._load_model()
         # set device based on configs (GPU / CPU)
         self.device = next(self.model.parameters()).device
 
-        logging.info(f"Model interface initialized succesfully - device: {self.device}")
+        print("[Nerfacto] model/device ready", self.device, flush=True)
+
 
         pass
 
