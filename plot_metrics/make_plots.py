@@ -21,6 +21,7 @@ def main(args):
     rays_sampled = exp_df["rays-sampled"].unique()
     sampling_strategy = exp_df["sampling-strategy"].unique()
     percentage_random = exp_df["percentage-random"].unique()
+    colors = exp_df["colors-init"].unique()
 
     plt.figure(figsize=(8, 4.5))
 
@@ -36,55 +37,26 @@ def main(args):
             if rays_sampled_value not in set(points):
                 continue
             for sampling_strategy_value in sampling_strategy:
-                if sampling_strategy_value == "random"  or sampling_strategy_value == "canny" or sampling_strategy_value == "sobel":
-                    if sampling_strategy_value == "random" and bool(args.random) == False:
-                        continue
-                    if sampling_strategy_value == "canny" and bool(args.canny) == False:
-                        continue
-                    if sampling_strategy_value == "sobel" and bool(args.sobel) == False:
-                        continue
-                    df_loop = exp_df[(exp_df["nerf-steps"] == nerf_steps_value) & (exp_df["rays-sampled"] == rays_sampled_value) & (exp_df["sampling-strategy"] == sampling_strategy_value)]
+                for color in colors:
+                    if sampling_strategy_value == "random"  or sampling_strategy_value == "canny" or sampling_strategy_value == "sobel":
+                        if sampling_strategy_value == "random" and bool(args.random) == False:
+                            continue
+                        if sampling_strategy_value == "canny" and bool(args.canny) == False:
+                            continue
+                        if sampling_strategy_value == "sobel" and bool(args.sobel) == False:
+                            continue
+                        df_loop = exp_df[(exp_df["nerf-steps"] == nerf_steps_value) & (exp_df["rays-sampled"] == rays_sampled_value) & (exp_df["sampling-strategy"] == sampling_strategy_value)]
 
-                    df_loop = df_loop[df_loop["scene-name"].isin(set(args.scenes))]
-
-                    df_loop = df_loop[df_loop["step"] < length_plot]
-
-                    metric_cols = ["ssim", "psnr", "lpips"]
-
-                    agg_scenes = (
-                        df_loop
-                        .groupby(["scene-name", "step"])[metric_cols]
-                        .mean()
-                    )
-
-                    print(len(df_loop), len(agg_scenes), nerf_steps_value)
-                
-                    agg = agg_scenes.groupby("step")[metric_cols].mean()
-                    
-                    y = agg[args.metric].to_numpy()
-                    if len(y) == 0:
-                        continue
-
-                    x = rescaled_x(len(y), len(y) * 100)
-                    
-                    plt.plot(x, y, marker="o", label="nerf steps: " + str(nerf_steps_value) + "; number of points: " + str(rays_sampled_value) + "; strategy: " + str(sampling_strategy_value))
-                    #plt.plot(x, y, label="nerf steps: " + str(nerf_steps_value) + "; number of points: " + str(rays_sampled_value) + "; strategy: " + str(sampling_strategy_value))
-                else:
-                    if sampling_strategy_value == "mixed-canny" and args.canny_mixed == False:
-                        continue
-                    if sampling_strategy_value == "mixed-sobel" and args.sobel_mixed == False:
-                        continue
-                    for percentage_random_value in percentage_random:
-                        df_loop = exp_df[(exp_df["nerf-steps"] == nerf_steps_value) & (exp_df["rays-sampled"] == rays_sampled_value) & (exp_df["sampling-strategy"] == sampling_strategy_value) & (exp_df["percentage-random"] == percentage_random_value)]
-                    
                         df_loop = df_loop[df_loop["scene-name"].isin(set(args.scenes))]
+                        if color == "image":
+                            df_loop = df_loop[df_loop["colors-init"] == "image"]
+                        else:
+                            df_loop = df_loop[df_loop["colors-init"] != "image"]
 
-                        df_loop = df_loop[df_loop["step"] <= length_plot]
-
-                        print(df_loop["scene-name"].unique())
+                        df_loop = df_loop[df_loop["step"] < length_plot]
 
                         metric_cols = ["ssim", "psnr", "lpips"]
-                    
+
                         agg_scenes = (
                             df_loop
                             .groupby(["scene-name", "step"])[metric_cols]
@@ -100,8 +72,45 @@ def main(args):
                             continue
 
                         x = rescaled_x(len(y), len(y) * 100)
-                        plt.plot(x, y, marker="o", label="nerf steps: " + str(nerf_steps_value) + "; points: " + str(rays_sampled_value) + "; strategy: " + str(sampling_strategy_value) + "; percentage: " + str(percentage_random_value))
-                        #plt.plot(x, y, label=str(nerf_steps_value) + " " + str(rays_sampled_value) + " " + str(sampling_strategy_value) + " " + str(percentage_random[0]))
+                        
+                        if color == "image":
+                            plt.plot(x, y, marker="o", label="nerf steps: " + str(nerf_steps_value) + "; number of points: " + str(rays_sampled_value) + "; strategy: " + str(sampling_strategy_value) + " colors from images")
+                        else:
+                            plt.plot(x, y, marker="o", label="nerf steps: " + str(nerf_steps_value) + "; number of points: " + str(rays_sampled_value) + "; strategy: " + str(sampling_strategy_value))
+                        #plt.plot(x, y, label="nerf steps: " + str(nerf_steps_value) + "; number of points: " + str(rays_sampled_value) + "; strategy: " + str(sampling_strategy_value))
+                    else:
+                        if sampling_strategy_value == "mixed-canny" and args.canny_mixed == False:
+                            continue
+                        if sampling_strategy_value == "mixed-sobel" and args.sobel_mixed == False:
+                            continue
+                        for percentage_random_value in percentage_random:
+                            df_loop = exp_df[(exp_df["nerf-steps"] == nerf_steps_value) & (exp_df["rays-sampled"] == rays_sampled_value) & (exp_df["sampling-strategy"] == sampling_strategy_value) & (exp_df["percentage-random"] == percentage_random_value)]
+                        
+                            df_loop = df_loop[df_loop["scene-name"].isin(set(args.scenes))]
+
+                            df_loop = df_loop[df_loop["step"] <= length_plot]
+
+                            print(df_loop["scene-name"].unique())
+
+                            metric_cols = ["ssim", "psnr", "lpips"]
+                        
+                            agg_scenes = (
+                                df_loop
+                                .groupby(["scene-name", "step"])[metric_cols]
+                                .mean()
+                            )
+
+                            print(len(df_loop), len(agg_scenes), nerf_steps_value)
+                        
+                            agg = agg_scenes.groupby("step")[metric_cols].mean()
+                            
+                            y = agg[args.metric].to_numpy()
+                            if len(y) == 0:
+                                continue
+
+                            x = rescaled_x(len(y), len(y) * 100)
+                            plt.plot(x, y, marker="o", label="nerf steps: " + str(nerf_steps_value) + "; points: " + str(rays_sampled_value) + "; strategy: " + str(sampling_strategy_value) + "; percentage: " + str(percentage_random_value))
+                            #plt.plot(x, y, label=str(nerf_steps_value) + " " + str(rays_sampled_value) + " " + str(sampling_strategy_value) + " " + str(percentage_random[0]))
 
                     
     metric_cols = ["ssim", "psnr", "lpips"]
@@ -137,7 +146,7 @@ def main(args):
         labelspacing=0.2
     )
     plt.tight_layout()
-    plt.savefig(Path("/home/llazzaroni/ds-lab/RadSplat/plot_metrics/plots/img17"), dpi=150)
+    plt.savefig(Path("/home/llazzaroni/ds-lab/RadSplat/plot_metrics/plots/img16"), dpi=150)
 
 
 if __name__ == "__main__":
@@ -166,6 +175,11 @@ if __name__ == "__main__":
         nargs="+",
         default=[500, 1000, 2500, 5000, 10000],
         help="List of scene names to process"
+    )
+    p.add_argument(
+        "--colors",
+        action="store_true",
+        default=False
     )
     p.add_argument("--len-plot", default=5000)
     args = p.parse_args()

@@ -216,6 +216,3 @@ exemple_data/imgs
 exemple_data/edge_*
 
 plot_metrics/experiments_results/
-density_rays/logs/
-density_rays/pictures/
-density_rays/data/

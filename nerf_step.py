@@ -4,7 +4,7 @@ import torch
 import logging
 
 from nerf_models import Nerfacto
-from point_samplers import sobel_edge_detector_sampler, canny_edge_detector_sampler, random_sampler, mixed_sampler
+from point_samplers import sobel_edge_detector_sampler, canny_edge_detector_sampler, random_sampler, mixed_sampler, patched_sampler
 from gs_initializer import Initializer
 from pathlib import Path
 import argparse
@@ -96,6 +96,8 @@ if __name__ == "__main__":
         coords = mixed_sampler(model.pipeline.datamanager, N_RAYS, share_rnd = args.percentage_random, edge_detector = "sobel", device = model.device)
     elif args.ray_sampling_strategy == "mixed-canny":
         coords = mixed_sampler(model.pipeline.datamanager, N_RAYS, share_rnd = args.percentage_random, edge_detector = "canny", device = model.device)
+    elif args.ray_sampling_strategy == "patches":
+        coords = patched_sampler(model.pipeline.datamanager, N_RAYS, model.device, 32, 16)
     else:
         coords = random_sampler(model.pipeline.datamanager, N_RAYS, model.device)
 
@@ -135,6 +137,7 @@ if __name__ == "__main__":
 
 
     xyzrgb = torch.cat(xyzrgb_chunks, dim=0)
+    print("number of rays:", xyzrgb.shape[0])
 
     image_filenames_abs = [str(p) for p in dpo.image_filenames]
     image_filenames_rel = [rel_to_images_root(p) for p in image_filenames_abs]
