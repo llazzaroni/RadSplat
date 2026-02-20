@@ -46,8 +46,6 @@ from nerfview import CameraState, RenderTabState, apply_float_colormap
 # save_first_ckp which save first ckp and make the video
 
 
-
-
 @dataclass
 class Config:
     pt_path: str = ""
