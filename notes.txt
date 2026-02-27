@@ -1,0 +1,51 @@
+1) step: run nerf; creates the nerf folder in the directory the job is started from
+
+ns-train nerfacto \
+    --vis tensorboard \
+    --experiment-name EXPERIMENT_NAME \
+    --timestamp EXPERIMENT_NAME \
+    --steps-per-eval-image NERF_MAX_NUM_ITERATIONS \
+    --max-num-iterations NERF_MAX_NUM_ITERATIONS \
+    --save-only-latest-checkpoint True \
+    --logging.steps-per-log 100 \
+    --logging.profiler "pytorch" \
+    colmap \
+    --colmap-path DATA_DIR/sparse/0 \
+    --images-path DATA_DIR/images
+
+2) run nerf_step; this produces the tensor of positions and colors to initialize gaussian splatting
+
+python nerf_step.py \
+    --nerf-folder NERF_MODEL \
+    --output-name POSITION_TENSOR_OUTPUT_NAME \
+    --sampling-size SAMPLING_SIZE \
+    --ray-sampling-strategy RAY_SAMPLING_STRATEGY \
+    --percentage-random PERCENTAGE_RANDOM
+
+NERF_MODEL is: nerf_folder/outputs/EXPERIMENT_NAME/nerfacto/EXPERIMENT_NAME/config.yml
+POSITION_TENSOR_OUTPUT_NAME is: EXPERIMENT_DIR/ray_sample.pt
+SAMPLING_SIZE: 1_000_000 for standard RadSplat
+RAY_SAMPLING_STRATEGY: "random" for standard RadSplat; potentially "patches" for minimal small upgrade
+
+3) generate the new images
+
+python regen_img.py \
+    --input-dataset DATA_DIR \
+    --output-dataset OUT_DATA_DIR \
+    --nerf-folder NERF_MODEL
+
+What regen_img.py does:
+- Copies DATA_DIR into OUT_DATA_DIR
+- Removes image files from images, images_2, images_4, images_8 in OUT_DATA_DIR
+- Re-renders images from NeRF camera poses loaded from NERF_MODEL
+- Saves regenerated images to images and regenerated downscaled versions to images_2/images_4/images_8
+
+4) generate the images from the new poses:
+
+python images.py \
+  --nerf-folders CFG1 CFG2 CFG3 \
+  --exp-dirs EXP_DIR1 EXP_DIR2 EXP_DIR3 \
+  --input-dataset /path/to/old_dataset \
+  --output-dataset /path/to/new_dataset \
+  --tmp-root /tmp \
+  --tau 1.5

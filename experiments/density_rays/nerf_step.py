@@ -5,10 +5,10 @@ import math
 import torch
 import logging
 
-from nerf_models import Nerfacto
+from RadSplat.nerfstep.nerf_models import Nerfacto
 from nerfstudio.field_components.field_heads import FieldHeadNames
-from point_samplers import sobel_edge_detector_sampler, canny_edge_detector_sampler, random_sampler, mixed_sampler
-from gs_initializer import Initializer
+from RadSplat.nerfstep.point_samplers import sobel_edge_detector_sampler, canny_edge_detector_sampler, random_sampler, mixed_sampler
+from RadSplat.nerfstep.gs_initializer import Initializer
 from pathlib import Path
 import argparse
 
