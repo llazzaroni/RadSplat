@@ -1,6 +1,7 @@
 import argparse
 import shutil
 from pathlib import Path
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 from PIL import Image
@@ -13,6 +14,7 @@ except ModuleNotFoundError:
 
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp"}
+SCALE_FOLDERS = {1: "images", 2: "images_2", 4: "images_4", 8: "images_8"}
 
 
 def copy_dataset(input_dataset: Path, output_dataset: Path) -> None:
@@ -24,7 +26,7 @@ def copy_dataset(input_dataset: Path, output_dataset: Path) -> None:
 
 
 def clear_images(root: Path) -> None:
-    for folder_name in ["images", "images_2", "images_4", "images_8"]:
+    for folder_name in SCALE_FOLDERS.values():
         folder = root / folder_name
         if not folder.exists():
             continue
@@ -33,12 +35,13 @@ def clear_images(root: Path) -> None:
                 p.unlink()
 
 
-def rel_to_images_root(p: Path) -> Path:
+def rel_to_images_root(p: Path) -> Tuple[str, Path]:
     parts = p.parts
-    if "images" in parts:
-        i = parts.index("images")
-        return Path(*parts[i:])
-    return Path("images") / p.name
+    for i, part in enumerate(parts):
+        if part == "images" or part.startswith("images_"):
+            tail = Path(*parts[i + 1 :]) if i + 1 < len(parts) else Path(p.name)
+            return part, tail
+    return "images", Path(p.name)
 
 
 def tensor_rgb_to_pil(rgb: torch.Tensor) -> Image.Image:
@@ -47,27 +50,77 @@ def tensor_rgb_to_pil(rgb: torch.Tensor) -> Image.Image:
     return Image.fromarray(arr)
 
 
-def save_multiscale(img: Image.Image, out_root: Path, rel_images_path: Path) -> None:
-    out_paths = {
-        1: out_root / rel_images_path,
-        2: out_root / str(rel_images_path).replace("images/", "images_2/", 1),
-        4: out_root / str(rel_images_path).replace("images/", "images_4/", 1),
-        8: out_root / str(rel_images_path).replace("images/", "images_8/", 1),
-    }
+def first_image_size(folder: Path) -> Optional[Tuple[int, int]]:
+    if not folder.exists():
+        return None
+    for p in sorted(folder.rglob("*")):
+        if p.is_file() and p.suffix.lower() in IMAGE_EXTS:
+            with Image.open(p) as img:
+                return img.size
+    return None
 
-    for scale, out_path in out_paths.items():
-        out_path = Path(out_path)
+
+def dataset_scale_sizes(dataset_root: Path) -> Dict[int, Tuple[int, int]]:
+    sizes = {}
+    for scale, folder_name in SCALE_FOLDERS.items():
+        size = first_image_size(dataset_root / folder_name)
+        if size is not None:
+            sizes[scale] = size
+    return sizes
+
+
+def detect_base_scale(render_size: Tuple[int, int], input_dataset: Path) -> int:
+    scale_sizes = dataset_scale_sizes(input_dataset)
+    if not scale_sizes:
+        raise RuntimeError("Could not find any image files in input dataset scale folders.")
+
+    exact = [s for s, sz in scale_sizes.items() if sz == render_size]
+    if exact:
+        return min(exact)
+
+    # Fallback: allow a tiny tolerance (e.g., odd-size rounding differences).
+    close = [
+        (s, abs(sz[0] - render_size[0]) + abs(sz[1] - render_size[1]))
+        for s, sz in scale_sizes.items()
+        if abs(sz[0] - render_size[0]) <= 1 and abs(sz[1] - render_size[1]) <= 1
+    ]
+    if close:
+        close.sort(key=lambda x: x[1])
+        return close[0][0]
+
+    raise RuntimeError(
+        f"Rendered size {render_size} does not match any input scale sizes: {scale_sizes}"
+    )
+
+
+def keep_scale_folders(output_dataset: Path, keep_scales) -> None:
+    keep_names = {SCALE_FOLDERS[s] for s in keep_scales}
+    for folder_name in SCALE_FOLDERS.values():
+        folder = output_dataset / folder_name
+        if folder_name in keep_names:
+            folder.mkdir(parents=True, exist_ok=True)
+        elif folder.exists():
+            shutil.rmtree(folder)
+
+
+def save_multiscale(
+    img: Image.Image, out_root: Path, rel_tail: Path, base_scale: int, keep_scales
+) -> None:
+    for scale in keep_scales:
+        folder_name = SCALE_FOLDERS[scale]
+        out_path = out_root / folder_name / rel_tail
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        if scale == 1:
+        if scale == base_scale:
             img_scale = img
         else:
-            w = max(1, img.width // scale)
-            h = max(1, img.height // scale)
+            ratio = scale // base_scale
+            w = max(1, img.width // ratio)
+            h = max(1, img.height // ratio)
             img_scale = img.resize((w, h), resample=Image.Resampling.LANCZOS)
         img_scale.save(out_path)
 
 
-def regenerate_images(nerf_folder: Path, output_dataset: Path) -> None:
+def regenerate_images(nerf_folder: Path, input_dataset: Path, output_dataset: Path) -> None:
     model = Nerfacto(str(nerf_folder))
     datamanager = model.pipeline.datamanager
 
@@ -95,14 +148,28 @@ def regenerate_images(nerf_folder: Path, output_dataset: Path) -> None:
 
     model.pipeline.model.eval()
     with torch.no_grad():
+        base_scale = None
+        keep_scales = None
+
         for filename, camera in entries:
             outputs = model.pipeline.model.get_outputs_for_camera(camera)
             rgb = outputs["rgb"]
             if rgb.ndim == 4:
                 rgb = rgb[0]
             pil_img = tensor_rgb_to_pil(rgb)
-            rel_path = rel_to_images_root(Path(str(filename)))
-            save_multiscale(pil_img, output_dataset, rel_path)
+            _, rel_tail = rel_to_images_root(Path(str(filename)))
+
+            if base_scale is None:
+                base_scale = detect_base_scale((pil_img.width, pil_img.height), input_dataset)
+                keep_scales = [s for s in sorted(SCALE_FOLDERS) if s >= base_scale]
+                keep_scale_folders(output_dataset, keep_scales)
+                print(
+                    f"Detected NeRF training scale: images_{base_scale if base_scale > 1 else 1} "
+                    f"(render size {pil_img.width}x{pil_img.height}). Writing scales: "
+                    f"{[SCALE_FOLDERS[s] for s in keep_scales]}"
+                )
+
+            save_multiscale(pil_img, output_dataset, rel_tail, base_scale, keep_scales)
 
 
 def parse_args():
@@ -117,7 +184,7 @@ def main():
     args = parse_args()
     copy_dataset(args.input_dataset, args.output_dataset)
     clear_images(args.output_dataset)
-    regenerate_images(args.nerf_folder, args.output_dataset)
+    regenerate_images(args.nerf_folder, args.input_dataset, args.output_dataset)
     print(f"Regenerated dataset saved to: {args.output_dataset}")
 
 

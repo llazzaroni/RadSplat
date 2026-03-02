@@ -82,7 +82,7 @@ ns-train nerfacto \
 
 
 # Downsample a dataset
-python RadSplat/utils/sample_multiscale_dataset.py \
+python utils/sample_multiscale_dataset.py \
   --src /path/to/source_dataset \
   --dst /path/to/empty_output_folder \
   --n 50 \
@@ -98,6 +98,11 @@ ns-train nerfacto \
   --logging.steps-per-log 100 \
   --logging.profiler pytorch \
   colmap \
-  --downscale-factor 1 \
+  --downscale-factor 4 \
   --colmap-path /cluster/scratch/rbollati/dataset/flowers_subset/sparse/0 \
   --images-path /cluster/scratch/rbollati/dataset/flowers_subset/images
+
+python ~/RadSplat/RadSplat/regen_img.py \
+  --input-dataset /cluster/scratch/rbollati/dataset/flowers_subset \
+  --output-dataset /cluster/scratch/rbollati/dataset/flowers_regen \
+  --nerf-folder /cluster/scratch/rbollati/models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers_try/config.yml
