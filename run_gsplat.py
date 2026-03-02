@@ -8,7 +8,8 @@ import tyro
 from submodules.gsplat.gsplat.distributed import cli
 from submodules.gsplat.gsplat.strategy import DefaultStrategy, MCMCStrategy
 from gsplat_dir.cfg import Config
-from gsplat_dir import Runner
+from gsplat_dir.runner import Runner
+
 
 
 def main(local_rank: int, world_rank, world_size: int, cfg: Config):
