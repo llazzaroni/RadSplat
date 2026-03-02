@@ -49,3 +49,42 @@ python images.py \
   --output-dataset /path/to/new_dataset \
   --tmp-root /tmp \
   --tau 1.5
+
+
+
+
+EXTRA
+
+
+# GSPLAT (SfM init, no NeRF tensor)
+python run_gsplat.py default \
+  --no-nerf-init \
+  --init-type sfm \
+  --data-dir /cluster/scratch/rbollati/dataset/flowers \
+  --result-dir /cluster/scratch/rbollati/models/gsplat_try \
+  --data-factor 1
+
+
+# NERF full-res variant (the one that was stalling for you)
+ns-train nerfacto \
+  --vis tensorboard \
+  --experiment-name flowers_try \
+  --timestamp flowers_try \
+  --steps-per-eval-image 5000 \
+  --max-num-iterations 5000 \
+  --save-only-latest-checkpoint True \
+  --logging.steps-per-log 100 \
+  --logging.profiler pytorch \
+  colmap \
+  --downscale-factor 1 \
+  --colmap-path /cluster/scratch/rbollati/dataset/flowers/sparse/0 \
+  --images-path /cluster/scratch/rbollati/dataset/flowers/images
+
+
+# Downsample a dataset
+  python RadSplat/utils/sample_multiscale_dataset.py \
+  --src /path/to/source_dataset \
+  --dst /path/to/empty_output_folder \
+  --n 50 \
+  --seed 42
+
