@@ -155,7 +155,11 @@ def save_multiscale(
             w = max(1, img.width // ratio)
             h = max(1, img.height // ratio)
             img_scale = img.resize((w, h), resample=Image.Resampling.LANCZOS)
-        img_scale.save(out_path)
+        ext = out_path.suffix.lower()
+        if ext in {".jpg", ".jpeg"}:
+            img_scale.save(out_path, quality=100, subsampling=0)
+        else:
+            img_scale.save(out_path)
 
 
 def regenerate_images(nerf_path: Path, input_dataset: Path, output_dataset: Path) -> None:

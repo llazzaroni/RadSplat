@@ -122,3 +122,24 @@ ns-train mipnerf \
   --downscale-factor 1 \
   --colmap-path /cluster/scratch/rbollati/dataset/flowers_subset/sparse/0 \
   --images-path /cluster/scratch/rbollati/dataset/flowers_subset/images
+
+
+ns-train nerfacto \
+  --vis tensorboard \
+  --experiment-name ensemble_1 \
+  --timestamp flowers_try \
+  --steps-per-eval-image 30000 \
+  --max-num-iterations 30000 \
+  --save-only-latest-checkpoint True \
+  --logging.steps-per-log 100 \
+  --logging.profiler pytorch \
+  colmap \
+  --downscale-factor 4 \
+  --colmap-path /cluster/scratch/rbollati/dataset/flowers/sparse/0 \
+  --images-path /cluster/scratch/rbollati/dataset/flowers/images
+
+
+python ~/RadSplat/RadSplat/regen_img.py \
+  --input-dataset /cluster/scratch/rbollati/dataset/flowers \
+  --output-dataset /cluster/scratch/rbollati/dataset/flowers_regen_full \
+  --nerf-folder /cluster/scratch/rbollati/models/nerf_real/outputs/ensemble_1/nerfacto/flowers_try/config.yml
