@@ -85,7 +85,7 @@ ns-train nerfacto \
 python utils/sample_multiscale_dataset.py \
   --src /path/to/source_dataset \
   --dst /path/to/empty_output_folder \
-  --n 50 \
+  --n 35 \
   --seed 42
 
 ns-train nerfacto \
@@ -134,12 +134,19 @@ ns-train nerfacto \
   --logging.steps-per-log 100 \
   --logging.profiler pytorch \
   colmap \
-  --downscale-factor 4 \
-  --colmap-path /cluster/scratch/rbollati/dataset/flowers/sparse/0 \
-  --images-path /cluster/scratch/rbollati/dataset/flowers/images
+  --downscale-factor 1 \
+  --colmap-path /cluster/scratch/rbollati/dataset/flowers_subset/sparse/0 \
+  --images-path /cluster/scratch/rbollati/dataset/flowers_subset/images
 
 
 python ~/RadSplat/RadSplat/regen_img.py \
-  --input-dataset /cluster/scratch/rbollati/dataset/flowers \
-  --output-dataset /cluster/scratch/rbollati/dataset/flowers_regen_full \
-  --nerf-folder /cluster/scratch/rbollati/models/nerf_real/outputs/ensemble_1/nerfacto/flowers_try/config.yml
+  --input-dataset /cluster/scratch/rbollati/dataset/flowers_subset \
+  --output-dataset /cluster/scratch/rbollati/dataset/flowers_regen \
+  --nerf-folder /cluster/scratch/rbollati/models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers_try/config.yml
+
+
+python utils/sample_multiscale_dataset.py \
+  --src /cluster/scratch/rbollati/dataset/flowers \
+  --dst /cluster/scratch/rbollati/dataset/flowers_subset \
+  --n 65 \
+  --seed 42

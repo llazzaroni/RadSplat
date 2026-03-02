@@ -85,8 +85,7 @@ if __name__ == "__main__":
     model = Nerfacto(folder)
     cams = model.pipeline.datamanager.train_dataset.cameras.to('cpu')
     dpo = model.pipeline.datamanager.train_dataparser_outputs
-
-    # saple points
+    # smple points
 
     if args.ray_sampling_strategy == "canny":
         coords = canny_edge_detector_sampler(model.pipeline.datamanager, N_RAYS, model.device)
@@ -100,7 +99,6 @@ if __name__ == "__main__":
         coords = patched_sampler(model.pipeline.datamanager, N_RAYS, model.device, 32, 16)
     else:
         coords = random_sampler(model.pipeline.datamanager, N_RAYS, model.device)
-
 
 
     xyzrgb_chunks = []
@@ -142,12 +140,27 @@ if __name__ == "__main__":
     image_filenames_abs = [str(p) for p in dpo.image_filenames]
     image_filenames_rel = [rel_to_images_root(p) for p in image_filenames_abs]
 
+    val_image_filenames_abs = [str(p) for p in test_dpo.image_filenames]
+    val_image_filenames_rel = [rel_to_images_root(p) for p in val_image_filenames_abs]
+
+    # Per-image split metadata (keyed by relative image path).
+    split_by_image_rel = {name: "train" for name in image_filenames_rel}
+    for name in val_image_filenames_rel:
+        # In case of overlap, train split takes precedence.
+        split_by_image_rel.setdefault(name, test_split)
+
     payload = {
         "xyzrgb": xyzrgb.cpu(),
         "camera_to_worlds": cams.camera_to_worlds.cpu(),
         "K": cams.get_intrinsics_matrices().cpu(),
         "image_filenames_abs": image_filenames_abs,
         "image_filenames_rel": image_filenames_rel,
+        "train_image_filenames_abs": image_filenames_abs,
+        "train_image_filenames_rel": image_filenames_rel,
+        "val_split_name": test_split,
+        "val_image_filenames_abs": val_image_filenames_abs,
+        "val_image_filenames_rel": val_image_filenames_rel,
+        "split_by_image_rel": split_by_image_rel,
     }
 
     logging.info('saving initial positions')

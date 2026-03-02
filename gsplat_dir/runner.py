@@ -13,7 +13,8 @@ import torch.nn.functional as F
 import tqdm
 import viser
 import yaml
-from submodules.gsplat.examples.datasets.colmap import Dataset, Parser
+#from submodules.gsplat.examples.datasets.colmap import Dataset, Parser
+from gsplat_dir.colmap import Dataset, Parser
 from submodules.gsplat.examples.datasets.traj import (
     generate_ellipse_path_z,
     generate_interpolated_path,
@@ -77,6 +78,7 @@ class Runner:
             factor=cfg.data_factor,
             normalize=cfg.normalize_world_space,
             test_every=cfg.test_every,
+            split_payload_path=cfg.pt_path,
         )
         self.trainset = Dataset(
             self.parser,

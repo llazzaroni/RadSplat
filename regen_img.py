@@ -168,27 +168,22 @@ def regenerate_images(nerf_path: Path, input_dataset: Path, output_dataset: Path
     model = Nerfacto(str(config_path))
     datamanager = model.pipeline.datamanager
 
-    # Collect entries from both train and eval/test splits to cover all frames.
+    # Regenerate only training-set images. Validation/test images are kept as-is
+    # from the copied original dataset.
     entries = []
-    seen = set()
-    split_names = ["train", getattr(datamanager, "test_split", "test")]
-    for split in split_names:
-        outputs = datamanager.dataparser.get_dataparser_outputs(split=split)
-        image_filenames = outputs.image_filenames
-        cameras = outputs.cameras.to(model.device)
-        if cameras.shape[0] != len(image_filenames):
-            raise RuntimeError(
-                f"Mismatch in split '{split}': cameras={cameras.shape[0]} filenames={len(image_filenames)}"
-            )
-        for i, filename in enumerate(image_filenames):
-            key = str(filename)
-            if key in seen:
-                continue
-            seen.add(key)
-            entries.append((filename, cameras[i : i + 1]))
+    split = "train"
+    outputs = datamanager.dataparser.get_dataparser_outputs(split=split)
+    image_filenames = outputs.image_filenames
+    cameras = outputs.cameras.to(model.device)
+    if cameras.shape[0] != len(image_filenames):
+        raise RuntimeError(
+            f"Mismatch in split '{split}': cameras={cameras.shape[0]} filenames={len(image_filenames)}"
+        )
+    for i, filename in enumerate(image_filenames):
+        entries.append((filename, cameras[i : i + 1]))
 
     if len(entries) == 0:
-        raise RuntimeError("No image filenames found in dataparser outputs (train/eval).")
+        raise RuntimeError("No image filenames found in dataparser outputs for split='train'.")
 
     model.pipeline.model.eval()
     with torch.no_grad():
@@ -227,7 +222,6 @@ def parse_args():
 def main():
     args = parse_args()
     copy_dataset(args.input_dataset, args.output_dataset)
-    clear_images(args.output_dataset)
     regenerate_images(args.nerf_folder, args.input_dataset, args.output_dataset)
     print(f"Regenerated dataset saved to: {args.output_dataset}")
 
