@@ -15,15 +15,26 @@ from all four folders into <dst>/images*, preserving relative paths.
 import argparse
 import random
 import shutil
+import sys
 from pathlib import Path
 from typing import List
 
 import numpy as np
 
 try:
-    from RadSplat.submodules.nerfstudio.nerfstudio.data.utils import colmap_parsing_utils as colmap
+    from nerfstudio.data.utils import colmap_parsing_utils as colmap
 except ModuleNotFoundError:
-    from submodules.nerfstudio.nerfstudio.data.utils import colmap_parsing_utils as colmap
+    repo_root = Path(__file__).resolve().parents[1]  # .../RadSplat
+    nerfstudio_submodule = repo_root / "submodules" / "nerfstudio"
+    if nerfstudio_submodule.is_dir():
+        sys.path.insert(0, str(nerfstudio_submodule))
+        from nerfstudio.data.utils import colmap_parsing_utils as colmap
+    else:
+        raise ModuleNotFoundError(
+            "Could not import 'nerfstudio.data.utils.colmap_parsing_utils'. "
+            "Install nerfstudio in the active env or ensure "
+            "'RadSplat/submodules/nerfstudio' exists."
+        )
 
 
 SCALES = ("images", "images_2", "images_4", "images_8")
