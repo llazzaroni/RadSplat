@@ -69,20 +69,33 @@ def save_multiscale(img: Image.Image, out_root: Path, rel_images_path: Path) -> 
 
 def regenerate_images(nerf_folder: Path, output_dataset: Path) -> None:
     model = Nerfacto(str(nerf_folder))
-    cameras = model.pipeline.datamanager.train_dataset.cameras.to(model.device)
-    image_filenames = model.pipeline.datamanager.train_dataparser_outputs.image_filenames
+    datamanager = model.pipeline.datamanager
 
-    if len(image_filenames) == 0:
-        raise RuntimeError("No image filenames found in dataparser outputs.")
-    if cameras.shape[0] != len(image_filenames):
-        raise RuntimeError(
-            f"Mismatch between cameras ({cameras.shape[0]}) and image filenames ({len(image_filenames)})."
-        )
+    # Collect entries from both train and eval/test splits to cover all frames.
+    entries = []
+    seen = set()
+    split_names = ["train", getattr(datamanager, "test_split", "test")]
+    for split in split_names:
+        outputs = datamanager.dataparser.get_dataparser_outputs(split=split)
+        image_filenames = outputs.image_filenames
+        cameras = outputs.cameras.to(model.device)
+        if cameras.shape[0] != len(image_filenames):
+            raise RuntimeError(
+                f"Mismatch in split '{split}': cameras={cameras.shape[0]} filenames={len(image_filenames)}"
+            )
+        for i, filename in enumerate(image_filenames):
+            key = str(filename)
+            if key in seen:
+                continue
+            seen.add(key)
+            entries.append((filename, cameras[i : i + 1]))
+
+    if len(entries) == 0:
+        raise RuntimeError("No image filenames found in dataparser outputs (train/eval).")
 
     model.pipeline.model.eval()
     with torch.no_grad():
-        for i, filename in enumerate(image_filenames):
-            camera = cameras[i : i + 1]
+        for filename, camera in entries:
             outputs = model.pipeline.model.get_outputs_for_camera(camera)
             rgb = outputs["rgb"]
             if rgb.ndim == 4:

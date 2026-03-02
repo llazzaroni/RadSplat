@@ -82,9 +82,46 @@ ns-train nerfacto \
 
 
 # Downsample a dataset
-  python RadSplat/utils/sample_multiscale_dataset.py \
+python RadSplat/utils/sample_multiscale_dataset.py \
   --src /path/to/source_dataset \
   --dst /path/to/empty_output_folder \
   --n 50 \
   --seed 42
 
+python utils/sample_multiscale_dataset.py \
+  --src /cluster/scratch/rbollati/dataset/flowers \
+  --dst /cluster/scratch/rbollati/dataset/flowers_subset \
+  --n 35 \
+  --seed 42
+
+TO RUN COLMAP
+
+colmap feature_extractor \
+  --database_path my_scene/database.db \
+  --image_path my_scene/images \
+  --ImageReader.single_camera 1 \
+  --ImageReader.camera_model PINHOLE
+
+colmap exhaustive_matcher \
+  --database_path my_scene/database.db
+
+mkdir -p my_scene/sparse
+
+colmap mapper \
+  --database_path my_scene/database.db \
+  --image_path my_scene/images \
+  --output_path my_scene/sparse
+
+ns-train nerfacto \
+  --vis tensorboard \
+  --experiment-name ensemble_1 \
+  --timestamp flowers_try \
+  --steps-per-eval-image 30000 \
+  --max-num-iterations 30000 \
+  --save-only-latest-checkpoint True \
+  --logging.steps-per-log 100 \
+  --logging.profiler pytorch \
+  colmap \
+  --downscale-factor 1 \
+  --colmap-path /cluster/scratch/rbollati/dataset/flowers_subset/sparse/0 \
+  --images-path /cluster/scratch/rbollati/dataset/flowers_subset/images
