@@ -106,3 +106,19 @@ python ~/RadSplat/RadSplat/regen_img.py \
   --input-dataset /cluster/scratch/rbollati/dataset/flowers_subset \
   --output-dataset /cluster/scratch/rbollati/dataset/flowers_regen \
   --nerf-folder /cluster/scratch/rbollati/models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers_try/config.yml
+
+
+
+ns-train mipnerf \
+  --vis tensorboard \
+  --experiment-name ensemble_1 \
+  --timestamp flowers_try \
+  --steps-per-eval-image 30000 \
+  --max-num-iterations 30000 \
+  --save-only-latest-checkpoint True \
+  --logging.steps-per-log 100 \
+  --logging.profiler pytorch \
+  colmap \
+  --downscale-factor 1 \
+  --colmap-path /cluster/scratch/rbollati/dataset/flowers_subset/sparse/0 \
+  --images-path /cluster/scratch/rbollati/dataset/flowers_subset/images

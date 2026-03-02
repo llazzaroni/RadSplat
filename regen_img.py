@@ -15,6 +15,7 @@ except ModuleNotFoundError:
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp"}
 SCALE_FOLDERS = {1: "images", 2: "images_2", 4: "images_4", 8: "images_8"}
+SUPPORTED_METHODS = {"nerfacto", "mipnerf"}
 
 
 def copy_dataset(input_dataset: Path, output_dataset: Path) -> None:
@@ -103,6 +104,43 @@ def keep_scale_folders(output_dataset: Path, keep_scales) -> None:
             shutil.rmtree(folder)
 
 
+def resolve_config_and_method(nerf_path: Path) -> Tuple[Path, str]:
+    if nerf_path.is_dir():
+        config_path = nerf_path / "config.yml"
+    else:
+        config_path = nerf_path
+
+    if not config_path.exists():
+        raise FileNotFoundError(f"Could not find config.yml at: {config_path}")
+    if config_path.suffix.lower() not in {".yml", ".yaml"}:
+        raise ValueError(f"Nerf path must point to a config .yml/.yaml file or run directory: {nerf_path}")
+
+    method = None
+
+    # Standard nerfstudio layout: outputs/<exp>/<method>/<timestamp>/config.yml
+    try:
+        candidate = config_path.parents[1].name
+        if candidate in SUPPORTED_METHODS:
+            method = candidate
+    except IndexError:
+        pass
+
+    # Fallback search in full path.
+    if method is None:
+        for part in config_path.parts:
+            if part in SUPPORTED_METHODS:
+                method = part
+                break
+
+    if method is None:
+        raise ValueError(
+            f"Could not infer method from path: {config_path}. "
+            f"Expected one of {sorted(SUPPORTED_METHODS)} in the path."
+        )
+
+    return config_path, method
+
+
 def save_multiscale(
     img: Image.Image, out_root: Path, rel_tail: Path, base_scale: int, keep_scales
 ) -> None:
@@ -120,8 +158,10 @@ def save_multiscale(
         img_scale.save(out_path)
 
 
-def regenerate_images(nerf_folder: Path, input_dataset: Path, output_dataset: Path) -> None:
-    model = Nerfacto(str(nerf_folder))
+def regenerate_images(nerf_path: Path, input_dataset: Path, output_dataset: Path) -> None:
+    config_path, method = resolve_config_and_method(nerf_path)
+    print(f"Loading NeRF method '{method}' from config: {config_path}")
+    model = Nerfacto(str(config_path))
     datamanager = model.pipeline.datamanager
 
     # Collect entries from both train and eval/test splits to cover all frames.
