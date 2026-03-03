@@ -214,6 +214,5 @@ temp.py
 test*
 exemple_data/imgs
 exemple_data/edge_*
-images.py
 
 plot_metrics/experiments_results/
