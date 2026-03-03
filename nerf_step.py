@@ -102,6 +102,8 @@ if __name__ == "__main__":
     model = Nerfacto(folder)
     cams = model.pipeline.datamanager.train_dataset.cameras.to('cpu')
     dpo = model.pipeline.datamanager.train_dataparser_outputs
+    test_split = getattr(model.pipeline.datamanager, "test_split", "test")
+    test_dpo = model.pipeline.datamanager.dataparser.get_dataparser_outputs(split=test_split)
     # smple points
 
     if args.ray_sampling_strategy == "canny":
