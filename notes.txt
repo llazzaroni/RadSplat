@@ -164,3 +164,20 @@ python run_gsplat.py default \
   --data-dir /cluster/scratch/rbollati/dataset/flowers_regen \
   --result-dir /cluster/scratch/rbollati/models/RadSplat_baseline \
   --data-factor 1
+
+
+python images.py \
+  --nerf-folders /cluster/scratch/rbollati/models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers_try/config.yml /cluster/scratch/rbollati/models/nerf_ensemble_2/outputs/ensemble_1/nerfacto/flowers_try/config.yml /cluster/scratch/rbollati/models/nerf_ensemble_3/outputs/ensemble_1/nerfacto/flowers_try/config.yml /cluster/scratch/rbollati/models/nerf_ensemble_4/outputs/ensemble_1/nerfacto/flowers_try/config.yml /cluster/scratch/rbollati/models/nerf_ensemble_5/outputs/ensemble_1/nerfacto/flowers_try/config.yml \
+  --exp-dirs /cluster/scratch/rbollati/models/nerf_ensemble_1 /cluster/scratch/rbollati/models/nerf_ensemble_2 /cluster/scratch/rbollati/models/nerf_ensemble_3 /cluster/scratch/rbollati/models/nerf_ensemble_4 /cluster/scratch/rbollati/models/nerf_ensemble_5 \
+  --input-dataset /cluster/scratch/rbollati/dataset/flowers_regen \
+  --output-dataset /cluster/scratch/rbollati/dataset/flowers_regen_aug \
+  --tmp-root /tmp \
+  --tau 1.5 \
+  --debug-plot-dir image_supervision \
+  --num-fin-samples 20
+
+python utils/plot_gsplat_eval_stats.py \
+  --run-dir /cluster/scratch/rbollati/models/RadSplat_baseline \
+  --label baseline \
+  --out-dir /cluster/scratch/rbollati/plots
+
