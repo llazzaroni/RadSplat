@@ -150,3 +150,10 @@ python utils/sample_multiscale_dataset.py \
   --dst /cluster/scratch/rbollati/dataset/flowers_subset \
   --n 65 \
   --seed 42
+
+
+python ~/RadsSplat/RadSplat/nerf_step.py \
+  --nerf-folder /cluster/scratch/rbollati/models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers_try/config.yml \
+  --output-name /cluster/scratch/rbollati/models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers_try/ray_sample.pt \
+  --sampling-size 1000000 \
+  --ray-sampling-strategy random
