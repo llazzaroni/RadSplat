@@ -380,6 +380,7 @@ class Parser:
         train_idx = []
         val_idx = []
         unmatched = []
+        unmatched_nerf_to_train = 0
         for i, name in enumerate(self.image_names):
             split_value = (
                 split_lookup.get(name)
@@ -387,6 +388,12 @@ class Parser:
                 or split_lookup.get(_norm_name(name))
             )
             if split_value is None:
+                # Synthetic NeRF samples are generated after nerf_step payload creation,
+                # so they are expected to be unmatched here. Put them in train by default.
+                if os.path.basename(name).startswith("nerf_sample_"):
+                    train_idx.append(i)
+                    unmatched_nerf_to_train += 1
+                    continue
                 unmatched.append(name)
                 continue
             if str(split_value).lower() == "train":
@@ -403,7 +410,7 @@ class Parser:
         print(
             f"[Parser] using split payload '{self.split_payload_path}': "
             f"train={len(self.train_indices_override)}, val={len(self.val_indices_override)}, "
-            f"unmatched={len(unmatched)}"
+            f"unmatched={len(unmatched)}, unmatched_nerf_to_train={unmatched_nerf_to_train}"
         )
 
 

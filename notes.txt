@@ -178,6 +178,8 @@ python images.py \
 
 python utils/plot_gsplat_eval_stats.py \
   --run-dir /cluster/scratch/rbollati/models/RadSplat_baseline \
+  --run-dir /cluster/scratch/rbollati/models/RadSplat_aug \
   --label baseline \
+  --label aug \
   --out-dir /cluster/scratch/rbollati/plots
 
