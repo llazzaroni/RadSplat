@@ -157,3 +157,10 @@ python ~/RadsSplat/RadSplat/nerf_step.py \
   --output-name /cluster/scratch/rbollati/models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers_try/ray_sample.pt \
   --sampling-size 1000000 \
   --ray-sampling-strategy random
+
+python run_gsplat.py default \
+  --nerf-init \
+  --pt-path /cluster/scratch/rbollati/models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers_try/ray_sample.pt \
+  --data-dir /cluster/scratch/rbollati/dataset/flowers_regen \
+  --result-dir /cluster/scratch/rbollati/models/RadSplat_baseline \
+  --data-factor 1

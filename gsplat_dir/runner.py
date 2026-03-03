@@ -87,6 +87,7 @@ class Runner:
             load_depths=cfg.depth_loss,
         )
         self.valset = Dataset(self.parser, split="val")
+        self._print_split_summary()
         self.scene_scale = self.parser.scene_scale * 1.1 * cfg.global_scale
         print("Scene scale:", self.scene_scale)
 
@@ -223,6 +224,28 @@ class Runner:
                 output_dir=Path(cfg.result_dir),
                 mode="training",
             )
+
+    def _print_split_summary(self) -> None:
+        if self.world_rank != 0:
+            return
+
+        train_names = [self.parser.image_names[i] for i in self.trainset.indices]
+        val_names = [self.parser.image_names[i] for i in self.valset.indices]
+        train_nerf = [n for n in train_names if os.path.basename(n).startswith("nerf_sample_")]
+        val_nerf = [n for n in val_names if os.path.basename(n).startswith("nerf_sample_")]
+
+        print(f"[Split] train images ({len(train_names)}):")
+        for n in train_names:
+            print(f"  {n}")
+        print(f"[Split] val images ({len(val_names)}):")
+        for n in val_names:
+            print(f"  {n}")
+        print(f"[Split] nerf samples in train ({len(train_nerf)}):")
+        for n in train_nerf:
+            print(f"  {n}")
+        print(f"[Split] nerf samples in val ({len(val_nerf)}):")
+        for n in val_nerf:
+            print(f"  {n}")
 
     def rasterize_splats(
         self,
