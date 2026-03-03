@@ -503,6 +503,29 @@ def save_multiscale_weights(weight_map, weight_dirs, expected_sizes, index):
             )
         np.save(weight_dirs[key] / fname, weight_scale.astype(np.float32))
 
+
+def save_weight_visualization(weight_map, out_dir, index):
+    """
+    Save a grayscale visualization where:
+      - white = low confidence (low weight)
+      - black = high confidence (high weight)
+    """
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    w = weight_map.astype(np.float32)
+    w_min = float(np.min(w))
+    w_max = float(np.max(w))
+    if w_max - w_min < 1e-8:
+        vis = np.full_like(w, 127, dtype=np.uint8)
+    else:
+        # Normalize to [0,1], then invert so low weights are white.
+        wn = (w - w_min) / (w_max - w_min)
+        vis = np.clip((1.0 - wn) * 255.0, 0, 255).astype(np.uint8)
+
+    fname = out_dir / f"nerf_sample_{index:03d}.png"
+    Image.fromarray(vis, mode="L").save(fname)
+
 def render_kept_views_to_tmp_pngs(
     folders, exp_dirs, new_c2w_kept,
     tmp_root, render_scale=0.5, num_models_to_render=None
@@ -554,7 +577,7 @@ def render_kept_views_to_tmp_pngs(
 
 def build_final_dataset_from_tmp(
     src_base_dataset_dir, dst_final_dataset_dir,
-    tmp_root, K, tau=1.5, blur_ksize=9, w_min=0.1, cleanup_tmp=False
+    tmp_root, K, tau=1.5, blur_ksize=9, w_min=0.1, cleanup_tmp=False, debug_weights_dir=None
 ):
     image_dirs, weight_dirs, expected_sizes = prepare_output_dataset(src_base_dataset_dir, dst_final_dataset_dir)
 
@@ -583,6 +606,8 @@ def build_final_dataset_from_tmp(
 
         save_multiscale_nerf_sample(chosen_img_uint8, image_dirs, expected_sizes, i)
         save_multiscale_weights(w_f32, weight_dirs, expected_sizes, i)
+        if debug_weights_dir is not None:
+            save_weight_visualization(w_f32, debug_weights_dir, i)
 
     # optional packed file
     # weights_all = np.stack([np.load(weights_dir / f"nerf_sample_{i:03d}.npy") for i in range(K)], axis=0)
@@ -785,6 +810,7 @@ def main(args):
         blur_ksize=9,
         w_min=0.1,
         cleanup_tmp=True,
+        debug_weights_dir=Path(args.debug_plot_dir) / "weight_maps",
     )
 
     colmap_dir = Path(final_dir) / "sparse" / "0"
