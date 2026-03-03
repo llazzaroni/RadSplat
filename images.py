@@ -309,7 +309,10 @@ def create_new_images_low_res_torch(model, c2w, selection_scale=0.125):
 
     model.pipeline.model.eval()
     with torch.no_grad():
-        for i in range(c2w.shape[0]):
+        total = c2w.shape[0]
+        for i in range(total):
+            if i == 0 or (i + 1) % 50 == 0 or i + 1 == total:
+                print(f"[selection-render] candidate view {i + 1}/{total}")
             c2w_new_batched = c2w[i].unsqueeze(0).to(model.device)  # (1,3,4)
 
             cam_i = Cameras(
@@ -516,9 +519,11 @@ def render_kept_views_to_tmp_pngs(
 
     K = new_c2w_kept.shape[0]
 
-    print("############### Starting the loop for saiving the images in the tmp folder ###############")
+    print("############### Starting tmp rendering for kept views ###############")
+    print(f"[tmp-render] models={len(folders)}, kept_views={K}, render_scale={render_scale}")
 
-    for m, (cfg, exp_dir) in enumerate(zip(folders, exp_dirs)):
+    for m, (cfg, exp_dir) in enumerate(zip(folders, exp_dirs), start=1):
+        print(f"[tmp-render] loading model {m}/{len(folders)}: {cfg}")
         model_dir = tmp_root / f"model_{m:03d}"
         model_dir.mkdir(parents=True, exist_ok=True)
 
@@ -526,13 +531,15 @@ def render_kept_views_to_tmp_pngs(
             model = Nerfacto(cfg)
 
         for i in range(K):
+            if i == 0 or (i + 1) % 10 == 0 or i + 1 == K:
+                print(f"[tmp-render] model {m}/{len(folders)} view {i + 1}/{K}")
             img_uint8 = render_one_view_uint8(model, new_c2w_kept[i], scale=render_scale)
             Image.fromarray(img_uint8).save(model_dir / f"nerf_sample_{i:03d}.png")
 
         del model
         torch.cuda.empty_cache()
 
-        print("############### model has finished, starting new model ###############")
+        print(f"[tmp-render] finished model {m}/{len(folders)}")
 
 
     return tmp_root
@@ -545,9 +552,12 @@ def build_final_dataset_from_tmp(
 
     tmp_root = Path(tmp_root)
 
-    print("############# starting to build the final folder with all the new data and weights #############")
+    print("############# Building final dataset from tmp renders #############")
+    print(f"[final-build] total kept views to write: {K}")
 
     for i in range(K):
+        if i == 0 or (i + 1) % 10 == 0 or i + 1 == K:
+            print(f"[final-build] writing sample {i + 1}/{K}")
         imgs_i = []
         model_dirs = sorted(tmp_root.glob("model_*"))
         for md in model_dirs:
@@ -673,6 +683,7 @@ def main(args):
 
     n_samples_jitter = 100
     n_samples_interpolation = 100
+    print(f"[phase] sampling candidate poses: jitter={n_samples_jitter}, interpolation={n_samples_interpolation}")
 
     new_c2w_jitter = sample_new_cameras_jitter(cam_positions, c2w, n_samples_jitter)
     new_c2w_interpolation = sample_new_cameras_interpolation(cam_positions, c2w, n_samples_interpolation)
@@ -681,11 +692,14 @@ def main(args):
         [new_c2w_jitter, new_c2w_interpolation],
         dim=0
     )
+    print(f"[phase] total candidate poses: {new_c2w.shape[0]}")
 
     plot_new_samples(cam_positions, new_c2w[..., :3, 3], "all_samples", args.debug_plot_dir)
 
 
-    for cfg, exp_dir in zip(folders, exp_dirs):
+    print(f"[phase] candidate scoring over ensemble: {len(folders)} models")
+    for mi, (cfg, exp_dir) in enumerate(zip(folders, exp_dirs), start=1):
+        print(f"[phase] scoring model {mi}/{len(folders)}")
         with pushd(exp_dir):
             model = Nerfacto(cfg)        
 
@@ -704,6 +718,7 @@ def main(args):
         # free GPU memory
         del model
         torch.cuda.empty_cache()
+        print(f"[phase] completed scoring model {mi}/{len(folders)}")
 
     mean = sum_rgb / M
     var_rgb = (sum_sq_rgb / M) - mean * mean
@@ -727,6 +742,7 @@ def main(args):
     score1, mean_conf1, frac_conf1 = score_candidates_from_var_map(var_map_kept1, alpha=10.0)
 
     K_keep = min(args.num_final_samples, score1.numel())
+    print(f"[phase] final selection keep={K_keep} (requested={args.num_final_samples}, available={score1.numel()})")
     topk1 = torch.topk(score1, k=K_keep).indices
 
     new_c2w_kept2 = new_c2w_kept1[topk1]
@@ -767,6 +783,7 @@ def main(args):
         colmap_dir=str(colmap_dir),
         new_c2w=new_c2w_kept2.cpu(),   # (K,3,4) on CPU is fine
     )
+    print(f"[done] final augmented dataset written to: {final_dir}")
 
     
 if __name__ == "__main__":

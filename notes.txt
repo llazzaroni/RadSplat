@@ -174,7 +174,7 @@ python images.py \
   --tmp-root /tmp \
   --tau 1.5 \
   --debug-plot-dir image_supervision \
-  --num-fin-samples 20
+  --num-final-samples 20
 
 python utils/plot_gsplat_eval_stats.py \
   --run-dir /cluster/scratch/rbollati/models/RadSplat_baseline \
