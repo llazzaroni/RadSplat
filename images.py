@@ -9,7 +9,7 @@ import shutil
 from pathlib import Path
 import matplotlib.pyplot as plt
 
-from RadSplat.nerfstep.nerf_models import Nerfacto
+from nerfstep.nerf_models import Nerfacto
 from nerfstudio.cameras.cameras import Cameras
 from nerfstudio.data.utils import colmap_parsing_utils as colmap
 from nerfstudio.data.utils.colmap_parsing_utils import rotmat2qvec
