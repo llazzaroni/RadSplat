@@ -171,7 +171,7 @@ python images.py \
   --exp-dirs /cluster/scratch/rbollati/models/nerf_ensemble_1 /cluster/scratch/rbollati/models/nerf_ensemble_2 /cluster/scratch/rbollati/models/nerf_ensemble_3 /cluster/scratch/rbollati/models/nerf_ensemble_4 /cluster/scratch/rbollati/models/nerf_ensemble_5 \
   --input-dataset /cluster/scratch/rbollati/dataset/flowers_regen \
   --output-dataset /cluster/scratch/rbollati/dataset/flowers_regen_aug \
-  --tmp-root /tmp \
+  --tmp-root /cluster/home/rbollati/tmp \
   --tau 1.5 \
   --debug-plot-dir image_supervision \
   --num-final-samples 20

@@ -462,10 +462,10 @@ def save_multiscale_nerf_sample(median_uint8, image_dirs, expected_sizes, index)
 
     # Save downsampled versions to images_2, images_4, images_8
     for scale, key in [(2, "images_2"), (4, "images_4"), (8, "images_8")]:
-        w = max(1, img.width // scale)
-        h = max(1, img.height // scale)
-        img_scale = img.resize((w, h), resample=Image.Resampling.LANCZOS)
         exp_w, exp_h = expected_sizes[key]
+        # Match dataset target sizes exactly. For odd dimensions, integer division
+        # may differ by one pixel from precomputed multiscale folders.
+        img_scale = img.resize((exp_w, exp_h), resample=Image.Resampling.LANCZOS)
         if img_scale.width != exp_w or img_scale.height != exp_h:
             raise RuntimeError(
                 f"Resolution mismatch for {fname} in {key}/: got (W={img_scale.width}, H={img_scale.height}), "
@@ -492,11 +492,10 @@ def save_multiscale_weights(weight_map, weight_dirs, expected_sizes, index):
     np.save(weight_dirs["weights_nerf_samples"] / fname, weight_map)
 
     for scale, key in [(2, "weights_nerf_samples_2"), (4, "weights_nerf_samples_4"), (8, "weights_nerf_samples_8")]:
-        new_w = max(1, w // scale)
-        new_h = max(1, h // scale)
-        weight_scale = cv2.resize(weight_map, (new_w, new_h), interpolation=cv2.INTER_AREA)
         img_key = key.replace("weights_nerf_samples", "images")
         exp_w, exp_h = expected_sizes[img_key]
+        new_w, new_h = exp_w, exp_h
+        weight_scale = cv2.resize(weight_map, (new_w, new_h), interpolation=cv2.INTER_AREA)
         if (new_w, new_h) != (exp_w, exp_h):
             raise RuntimeError(
                 f"Weight resolution mismatch for {fname} in {key}/: got (W={new_w}, H={new_h}), "
@@ -506,7 +505,7 @@ def save_multiscale_weights(weight_map, weight_dirs, expected_sizes, index):
 
 def render_kept_views_to_tmp_pngs(
     folders, exp_dirs, new_c2w_kept,
-    tmp_root, render_scale=0.5
+    tmp_root, render_scale=0.5, num_models_to_render=None
 ):
     """
     Creates:
@@ -519,11 +518,20 @@ def render_kept_views_to_tmp_pngs(
 
     K = new_c2w_kept.shape[0]
 
-    print("############### Starting tmp rendering for kept views ###############")
-    print(f"[tmp-render] models={len(folders)}, kept_views={K}, render_scale={render_scale}")
+    if num_models_to_render is None:
+        num_models_to_render = len(folders)
+    num_models_to_render = max(1, min(num_models_to_render, len(folders)))
 
-    for m, (cfg, exp_dir) in enumerate(zip(folders, exp_dirs), start=1):
-        print(f"[tmp-render] loading model {m}/{len(folders)}: {cfg}")
+    print("############### Starting tmp rendering for kept views ###############")
+    print(
+        f"[tmp-render] models={num_models_to_render}/{len(folders)}, "
+        f"kept_views={K}, render_scale={render_scale}"
+    )
+
+    for m, (cfg, exp_dir) in enumerate(
+        zip(folders[:num_models_to_render], exp_dirs[:num_models_to_render]), start=1
+    ):
+        print(f"[tmp-render] loading model {m}/{num_models_to_render}: {cfg}")
         model_dir = tmp_root / f"model_{m:03d}"
         model_dir.mkdir(parents=True, exist_ok=True)
 
@@ -532,14 +540,14 @@ def render_kept_views_to_tmp_pngs(
 
         for i in range(K):
             if i == 0 or (i + 1) % 10 == 0 or i + 1 == K:
-                print(f"[tmp-render] model {m}/{len(folders)} view {i + 1}/{K}")
+                print(f"[tmp-render] model {m}/{num_models_to_render} view {i + 1}/{K}")
             img_uint8 = render_one_view_uint8(model, new_c2w_kept[i], scale=render_scale)
             Image.fromarray(img_uint8).save(model_dir / f"nerf_sample_{i:03d}.png")
 
         del model
         torch.cuda.empty_cache()
 
-        print(f"[tmp-render] finished model {m}/{len(folders)}")
+        print(f"[tmp-render] finished model {m}/{num_models_to_render}")
 
 
     return tmp_root
@@ -564,14 +572,14 @@ def build_final_dataset_from_tmp(
             p = md / f"nerf_sample_{i:03d}.png"
             imgs_i.append(np.array(Image.open(p).convert("RGB"), dtype=np.uint8))
 
-        # Keep ensemble-based weights, but write one randomly selected model image.
+        # Keep variance-based weights, but write the first model image deterministically.
         _, w_f32, _ = median_and_weights_from_ensemble(
             imgs_i, tau=tau, blur_ksize=blur_ksize, w_min=w_min
         )
-        chosen_model_idx = np.random.randint(0, len(imgs_i))
+        chosen_model_idx = 0
         chosen_img_uint8 = imgs_i[chosen_model_idx]
         if i == 0:
-            print(f"[image-selection] using random model index {chosen_model_idx} for sample {i}")
+            print(f"[image-selection] using fixed model index {chosen_model_idx} for sample {i}")
 
         save_multiscale_nerf_sample(chosen_img_uint8, image_dirs, expected_sizes, i)
         save_multiscale_weights(w_f32, weight_dirs, expected_sizes, i)
@@ -765,6 +773,7 @@ def main(args):
         new_c2w_kept=new_c2w_kept2,
         tmp_root=tmp_root,
         render_scale=1.0,   # final dataset images: no extra downscale at render time
+        num_models_to_render=1,  # only first model for full-res generation
     )
 
     final_dir = build_final_dataset_from_tmp(
