@@ -360,6 +360,20 @@ class Runner:
             camtoworlds = camtoworlds_gt = data["camtoworld"].to(device)  # [1, 4, 4]
             Ks = data["K"].to(device)  # [1, 3, 3]
             pixels = data["image"].to(device) / 255.0  # [1, H, W, 3]
+            is_nerf_sample = (
+                data["is_nerf_sample"].to(device)
+                if "is_nerf_sample" in data
+                else torch.zeros((pixels.shape[0],), dtype=torch.bool, device=device)
+            )
+            weight_maps = (
+                data["weight_map"].to(device)
+                if "weight_map" in data
+                else torch.ones(
+                    (pixels.shape[0], pixels.shape[1], pixels.shape[2]),
+                    dtype=pixels.dtype,
+                    device=device,
+                )
+            )
             num_train_rays_per_step = (
                 pixels.shape[0] * pixels.shape[1] * pixels.shape[2]
             )
@@ -425,12 +439,58 @@ class Runner:
             )
 
             # loss
-            l1loss = F.l1_loss(colors, pixels)
-            ssimloss = 1.0 - fused_ssim(
-                colors.permute(0, 3, 1, 2), pixels.permute(0, 3, 1, 2), padding="valid"
-            )
-            loss = l1loss * (1.0 - cfg.ssim_lambda) + ssimloss * cfg.ssim_lambda
-            if cfg.depth_loss:
+            if not is_nerf_sample.any():
+                # Real images use L2 + SSIM.
+                l2loss = F.mse_loss(colors, pixels)
+                ssimloss = 1.0 - fused_ssim(
+                    colors.permute(0, 3, 1, 2), pixels.permute(0, 3, 1, 2), padding="valid"
+                )
+                nerf_l2loss = torch.tensor(0.0, device=device)
+                loss = l2loss * (1.0 - cfg.ssim_lambda) + ssimloss * cfg.ssim_lambda
+            else:
+                # Mixed batch: real -> original loss, nerf_sample -> weighted L2 only.
+                per_sample_losses = []
+                real_l2_terms = []
+                real_ssim_terms = []
+                nerf_l2_terms = []
+                B = pixels.shape[0]
+                for b in range(B):
+                    if bool(is_nerf_sample[b].item()):
+                        l2_map = ((colors[b] - pixels[b]) ** 2).mean(dim=-1)  # [H, W]
+                        w = torch.clamp(weight_maps[b], min=0.0)
+                        denom = torch.clamp(w.sum(), min=1e-8)
+                        l2_weighted = (l2_map * w).sum() / denom
+                        per_sample_losses.append(l2_weighted)
+                        nerf_l2_terms.append(l2_weighted)
+                    else:
+                        l2_b = F.mse_loss(colors[b : b + 1], pixels[b : b + 1])
+                        ssim_b = 1.0 - fused_ssim(
+                            colors[b : b + 1].permute(0, 3, 1, 2),
+                            pixels[b : b + 1].permute(0, 3, 1, 2),
+                            padding="valid",
+                        )
+                        real_loss_b = l2_b * (1.0 - cfg.ssim_lambda) + ssim_b * cfg.ssim_lambda
+                        per_sample_losses.append(real_loss_b)
+                        real_l2_terms.append(l2_b)
+                        real_ssim_terms.append(ssim_b)
+                loss = torch.stack(per_sample_losses).mean()
+                l2loss = (
+                    torch.stack(real_l2_terms).mean()
+                    if len(real_l2_terms) > 0
+                    else torch.tensor(0.0, device=device)
+                )
+                ssimloss = (
+                    torch.stack(real_ssim_terms).mean()
+                    if len(real_ssim_terms) > 0
+                    else torch.tensor(0.0, device=device)
+                )
+                nerf_l2loss = (
+                    torch.stack(nerf_l2_terms).mean()
+                    if len(nerf_l2_terms) > 0
+                    else torch.tensor(0.0, device=device)
+                )
+
+            if cfg.depth_loss and not is_nerf_sample.any():
                 # query depths from depth map
                 points = torch.stack(
                     [
@@ -463,7 +523,8 @@ class Runner:
 
             desc = f"loss={loss.item():.3f}| " f"sh degree={sh_degree_to_use}| "
             if cfg.depth_loss:
-                desc += f"depth loss={depthloss.item():.6f}| "
+                if not is_nerf_sample.any():
+                    desc += f"depth loss={depthloss.item():.6f}| "
             if cfg.pose_opt and cfg.pose_noise:
                 # monitor the pose error if we inject noise
                 pose_err = F.l1_loss(camtoworlds_gt, camtoworlds)
@@ -482,11 +543,13 @@ class Runner:
             if world_rank == 0 and cfg.tb_every > 0 and step % cfg.tb_every == 0:
                 mem = torch.cuda.max_memory_allocated() / 1024**3
                 self.writer.add_scalar("train/loss", loss.item(), step)
-                self.writer.add_scalar("train/l1loss", l1loss.item(), step)
+                self.writer.add_scalar("train/l2loss", l2loss.item(), step)
                 self.writer.add_scalar("train/ssimloss", ssimloss.item(), step)
+                self.writer.add_scalar("train/nerf_weighted_l2loss", nerf_l2loss.item(), step)
+                self.writer.add_scalar("train/nerf_sample_fraction", is_nerf_sample.float().mean().item(), step)
                 self.writer.add_scalar("train/num_GS", len(self.splats["means"]), step)
                 self.writer.add_scalar("train/mem", mem, step)
-                if cfg.depth_loss:
+                if cfg.depth_loss and not is_nerf_sample.any():
                     self.writer.add_scalar("train/depthloss", depthloss.item(), step)
                 if cfg.use_bilateral_grid:
                     self.writer.add_scalar("train/tvloss", tvloss.item(), step)

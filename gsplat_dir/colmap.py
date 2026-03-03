@@ -42,6 +42,7 @@ class Parser:
         self.normalize = normalize
         self.test_every = test_every
         self.split_payload_path = split_payload_path
+        self.weight_dir = None
 
         colmap_dir = os.path.join(data_dir, "sparse/0/")
         if not os.path.exists(colmap_dir):
@@ -172,6 +173,7 @@ class Parser:
             image_files = sorted(_get_rel_paths(image_dir))
         colmap_to_image = dict(zip(colmap_files, image_files))
         image_paths = [os.path.join(image_dir, colmap_to_image[f]) for f in image_names]
+        self.weight_dir = self._resolve_weight_dir()
 
         # 3D points and {image_name -> [point_idx]}
         points = manager.points3D.astype(np.float32)
@@ -327,6 +329,16 @@ class Parser:
         self.val_indices_override = None
         self._load_split_overrides()
 
+    def _resolve_weight_dir(self) -> Optional[str]:
+        if self.factor > 1 and not self.extconf["no_factor_suffix"]:
+            suffix = f"_{self.factor}"
+        else:
+            suffix = ""
+        weight_dir = os.path.join(self.data_dir, "weights_nerf_samples" + suffix)
+        if os.path.isdir(weight_dir):
+            return weight_dir
+        return None
+
     def _load_split_overrides(self) -> None:
         if not self.split_payload_path:
             return
@@ -420,6 +432,7 @@ class Dataset:
                 self.indices = indices[indices % self.parser.test_every != 0]
             else:
                 self.indices = indices[indices % self.parser.test_every == 0]
+        self._warned_missing_weight = set()
 
     def __len__(self):
         return len(self.indices)
@@ -427,11 +440,28 @@ class Dataset:
     def __getitem__(self, item: int) -> Dict[str, Any]:
         index = self.indices[item]
         image = imageio.imread(self.parser.image_paths[index])[..., :3]
+        image_name = self.parser.image_names[index]
+        is_nerf_sample = os.path.basename(image_name).startswith("nerf_sample_")
         camera_id = self.parser.camera_ids[index]
         K = self.parser.Ks_dict[camera_id].copy()  # undistorted K
         params = self.parser.params_dict[camera_id]
         camtoworlds = self.parser.camtoworlds[index]
         mask = self.parser.mask_dict[camera_id]
+        weight_map = np.ones(image.shape[:2], dtype=np.float32)
+
+        if is_nerf_sample and self.parser.weight_dir is not None:
+            stem = os.path.splitext(os.path.basename(image_name))[0]
+            weight_path = os.path.join(self.parser.weight_dir, f"{stem}.npy")
+            if os.path.isfile(weight_path):
+                weight_map = np.load(weight_path).astype(np.float32)
+                if weight_map.shape != image.shape[:2]:
+                    raise RuntimeError(
+                        f"Weight map shape mismatch for {image_name}: "
+                        f"weights={weight_map.shape}, image={image.shape[:2]}"
+                    )
+            elif weight_path not in self._warned_missing_weight:
+                print(f"[Dataset] missing weight map for {image_name}: {weight_path}. Using uniform weights.")
+                self._warned_missing_weight.add(weight_path)
 
         if len(params) > 0:
             # Images are distorted. Undistort them.
@@ -440,8 +470,10 @@ class Dataset:
                 self.parser.mapy_dict[camera_id],
             )
             image = cv2.remap(image, mapx, mapy, cv2.INTER_LINEAR)
+            weight_map = cv2.remap(weight_map, mapx, mapy, cv2.INTER_LINEAR)
             x, y, w, h = self.parser.roi_undist_dict[camera_id]
             image = image[y : y + h, x : x + w]
+            weight_map = weight_map[y : y + h, x : x + w]
 
         if self.patch_size is not None:
             # Random crop.
@@ -449,6 +481,7 @@ class Dataset:
             x = np.random.randint(0, max(w - self.patch_size, 1))
             y = np.random.randint(0, max(h - self.patch_size, 1))
             image = image[y : y + self.patch_size, x : x + self.patch_size]
+            weight_map = weight_map[y : y + self.patch_size, x : x + self.patch_size]
             K[0, 2] -= x
             K[1, 2] -= y
 
@@ -457,6 +490,8 @@ class Dataset:
             "camtoworld": torch.from_numpy(camtoworlds).float(),
             "image": torch.from_numpy(image).float(),
             "image_id": item,  # the index of the image in the dataset
+            "is_nerf_sample": torch.tensor(is_nerf_sample, dtype=torch.bool),
+            "weight_map": torch.from_numpy(weight_map).float(),
         }
         if mask is not None:
             data["mask"] = torch.from_numpy(mask).bool()
@@ -464,8 +499,11 @@ class Dataset:
         if self.load_depths:
             # projected points to image plane to get depths
             worldtocams = np.linalg.inv(camtoworlds)
-            image_name = self.parser.image_names[index]
-            point_indices = self.parser.point_indices[image_name]
+            point_indices = self.parser.point_indices.get(image_name, None)
+            if point_indices is None:
+                data["points"] = torch.empty((0, 2), dtype=torch.float32)
+                data["depths"] = torch.empty((0,), dtype=torch.float32)
+                return data
             points_world = self.parser.points[point_indices]
             points_cam = (worldtocams[:3, :3] @ points_world.T + worldtocams[:3, 3:4]).T
             points_proj = (K @ points_cam.T).T
