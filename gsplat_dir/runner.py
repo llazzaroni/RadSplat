@@ -76,6 +76,7 @@ class Runner:
         self.parser = Parser(
             data_dir=cfg.data_dir,
             factor=cfg.data_factor,
+            nerf_samples_factor=cfg.nerf_samples_data_factor,
             normalize=cfg.normalize_world_space,
             test_every=cfg.test_every,
             split_payload_path=cfg.pt_path,

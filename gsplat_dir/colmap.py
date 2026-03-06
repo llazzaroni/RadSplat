@@ -33,16 +33,19 @@ class Parser:
         self,
         data_dir: str,
         factor: int = 1,
+        nerf_samples_factor: Optional[int] = None,
         normalize: bool = False,
         test_every: int = 8,
         split_payload_path: str = "",
     ):
         self.data_dir = data_dir
         self.factor = factor
+        self.nerf_samples_factor = factor if nerf_samples_factor is None else nerf_samples_factor
         self.normalize = normalize
         self.test_every = test_every
         self.split_payload_path = split_payload_path
         self.weight_dir = None
+        self.nerf_weight_dir = None
 
         colmap_dir = os.path.join(data_dir, "sparse/0/")
         if not os.path.exists(colmap_dir):
@@ -152,28 +155,37 @@ class Parser:
             self.bounds = np.load(posefile)[:, -2:]
 
         # Load images.
-        if factor > 1 and not self.extconf["no_factor_suffix"]:
-            image_dir_suffix = f"_{factor}"
-        else:
-            image_dir_suffix = ""
         colmap_image_dir = os.path.join(data_dir, "images")
-        image_dir = os.path.join(data_dir, "images" + image_dir_suffix)
-        for d in [image_dir, colmap_image_dir]:
+        for d in [colmap_image_dir]:
             if not os.path.exists(d):
                 raise ValueError(f"Image folder {d} does not exist.")
 
-        # Downsampled images may have different names vs images used for COLMAP,
-        # so we need to map between the two sorted lists of files.
-        colmap_files = sorted(_get_rel_paths(colmap_image_dir))
-        image_files = sorted(_get_rel_paths(image_dir))
-        if factor > 1 and os.path.splitext(image_files[0])[1].lower() == ".jpg":
-            image_dir = _resize_image_folder(
-                colmap_image_dir, image_dir + "_png", factor=factor
-            )
+        def _build_image_paths_for_factor(factor_value: int):
+            if factor_value > 1 and not self.extconf["no_factor_suffix"]:
+                image_dir_suffix = f"_{factor_value}"
+            else:
+                image_dir_suffix = ""
+            image_dir = os.path.join(data_dir, "images" + image_dir_suffix)
+            if not os.path.exists(image_dir):
+                raise ValueError(f"Image folder {image_dir} does not exist.")
+
+            # Downsampled images may have different names vs images used for COLMAP.
+            colmap_files = sorted(_get_rel_paths(colmap_image_dir))
             image_files = sorted(_get_rel_paths(image_dir))
-        colmap_to_image = dict(zip(colmap_files, image_files))
-        image_paths = [os.path.join(image_dir, colmap_to_image[f]) for f in image_names]
-        self.weight_dir = self._resolve_weight_dir()
+            if factor_value > 1 and len(image_files) > 0 and os.path.splitext(image_files[0])[1].lower() == ".jpg":
+                image_dir = _resize_image_folder(colmap_image_dir, image_dir + "_png", factor=factor_value)
+                image_files = sorted(_get_rel_paths(image_dir))
+            colmap_to_image = dict(zip(colmap_files, image_files))
+            image_paths = [os.path.join(image_dir, colmap_to_image[f]) for f in image_names]
+            return image_dir, image_paths
+
+        image_dir, image_paths = _build_image_paths_for_factor(self.factor)
+        if self.nerf_samples_factor == self.factor:
+            nerf_image_paths = image_paths
+        else:
+            _, nerf_image_paths = _build_image_paths_for_factor(self.nerf_samples_factor)
+        self.weight_dir = self._resolve_weight_dir(self.factor)
+        self.nerf_weight_dir = self._resolve_weight_dir(self.nerf_samples_factor)
 
         # 3D points and {image_name -> [point_idx]}
         points = manager.points3D.astype(np.float32)
@@ -224,6 +236,8 @@ class Parser:
 
         self.image_names = image_names  # List[str], (num_images,)
         self.image_paths = image_paths  # List[str], (num_images,)
+        self.image_paths_real = image_paths  # List[str], (num_images,)
+        self.image_paths_nerf = nerf_image_paths  # List[str], (num_images,)
         self.camtoworlds = camtoworlds  # np.ndarray, (num_images, 4, 4)
         self.camera_ids = camera_ids  # List[int], (num_images,)
         self.Ks_dict = Ks_dict  # Dict of camera_id -> K
@@ -329,9 +343,9 @@ class Parser:
         self.val_indices_override = None
         self._load_split_overrides()
 
-    def _resolve_weight_dir(self) -> Optional[str]:
-        if self.factor > 1 and not self.extconf["no_factor_suffix"]:
-            suffix = f"_{self.factor}"
+    def _resolve_weight_dir(self, factor_value: int) -> Optional[str]:
+        if factor_value > 1 and not self.extconf["no_factor_suffix"]:
+            suffix = f"_{factor_value}"
         else:
             suffix = ""
         weight_dir = os.path.join(self.data_dir, "weights_nerf_samples" + suffix)
@@ -440,15 +454,21 @@ class Dataset:
             else:
                 self.indices = indices[indices % self.parser.test_every == 0]
         self._warned_missing_weight = set()
+        self._warned_mixed_undistort = set()
 
     def __len__(self):
         return len(self.indices)
 
     def __getitem__(self, item: int) -> Dict[str, Any]:
         index = self.indices[item]
-        image = imageio.imread(self.parser.image_paths[index])[..., :3]
         image_name = self.parser.image_names[index]
         is_nerf_sample = os.path.basename(image_name).startswith("nerf_sample_")
+        image_path = (
+            self.parser.image_paths_nerf[index]
+            if is_nerf_sample and hasattr(self.parser, "image_paths_nerf")
+            else self.parser.image_paths[index]
+        )
+        image = imageio.imread(image_path)[..., :3]
         camera_id = self.parser.camera_ids[index]
         K = self.parser.Ks_dict[camera_id].copy()  # undistorted K
         params = self.parser.params_dict[camera_id]
@@ -456,9 +476,20 @@ class Dataset:
         mask = self.parser.mask_dict[camera_id]
         weight_map = np.ones(image.shape[:2], dtype=np.float32)
 
-        if is_nerf_sample and self.parser.weight_dir is not None:
+        # If nerf samples are loaded at a different factor than real images,
+        # scale intrinsics per sample so projections stay consistent.
+        base_w, base_h = self.parser.imsize_dict[camera_id]
+        img_h, img_w = image.shape[:2]
+        if img_w != base_w or img_h != base_h:
+            sx = img_w / float(base_w)
+            sy = img_h / float(base_h)
+            K[0, :] *= sx
+            K[1, :] *= sy
+
+        sample_weight_dir = self.parser.nerf_weight_dir if is_nerf_sample else self.parser.weight_dir
+        if is_nerf_sample and sample_weight_dir is not None:
             stem = os.path.splitext(os.path.basename(image_name))[0]
-            weight_path = os.path.join(self.parser.weight_dir, f"{stem}.npy")
+            weight_path = os.path.join(sample_weight_dir, f"{stem}.npy")
             if os.path.isfile(weight_path):
                 weight_map = np.load(weight_path).astype(np.float32)
                 if weight_map.shape != image.shape[:2]:
@@ -476,11 +507,20 @@ class Dataset:
                 self.parser.mapx_dict[camera_id],
                 self.parser.mapy_dict[camera_id],
             )
-            image = cv2.remap(image, mapx, mapy, cv2.INTER_LINEAR)
-            weight_map = cv2.remap(weight_map, mapx, mapy, cv2.INTER_LINEAR)
-            x, y, w, h = self.parser.roi_undist_dict[camera_id]
-            image = image[y : y + h, x : x + w]
-            weight_map = weight_map[y : y + h, x : x + w]
+            if mapx.shape[:2] != image.shape[:2]:
+                warn_key = f"{camera_id}:{image.shape[1]}x{image.shape[0]}"
+                if warn_key not in self._warned_mixed_undistort:
+                    print(
+                        f"[Dataset] skipping undistort for mixed-resolution sample '{image_name}' "
+                        f"(image={image.shape[:2]}, map={mapx.shape[:2]})."
+                    )
+                    self._warned_mixed_undistort.add(warn_key)
+            else:
+                image = cv2.remap(image, mapx, mapy, cv2.INTER_LINEAR)
+                weight_map = cv2.remap(weight_map, mapx, mapy, cv2.INTER_LINEAR)
+                x, y, w, h = self.parser.roi_undist_dict[camera_id]
+                image = image[y : y + h, x : x + w]
+                weight_map = weight_map[y : y + h, x : x + w]
 
         if self.patch_size is not None:
             # Random crop.

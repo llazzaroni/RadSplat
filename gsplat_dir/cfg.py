@@ -23,6 +23,8 @@ class Config:
     data_dir: str = "data/360_v2/garden"
     # Downsample factor for the dataset
     data_factor: int = 4
+    # Optional downsample factor for nerf_sample_* images. If None, uses data_factor.
+    nerf_samples_data_factor: Optional[int] = None
     # Directory to save results
     result_dir: str = "results/garden"
     # Every N images there is a test image
