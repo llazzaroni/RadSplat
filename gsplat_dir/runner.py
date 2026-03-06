@@ -462,18 +462,19 @@ class Runner:
             )
 
             # loss
+            real_use_l1 = bool(getattr(cfg, "use_l1_for_real_samples", False))
             if not is_nerf_sample.any():
-                # Real images use L2 + SSIM.
-                l2loss = F.mse_loss(colors, pixels)
+                # Real images use (L1 or L2) + SSIM depending on config.
+                real_recon_loss = F.l1_loss(colors, pixels) if real_use_l1 else F.mse_loss(colors, pixels)
                 ssimloss = 1.0 - fused_ssim(
                     colors.permute(0, 3, 1, 2), pixels.permute(0, 3, 1, 2), padding="valid"
                 )
                 nerf_l2loss = torch.tensor(0.0, device=device)
-                loss = l2loss * (1.0 - cfg.ssim_lambda) + ssimloss * cfg.ssim_lambda
+                loss = real_recon_loss * (1.0 - cfg.ssim_lambda) + ssimloss * cfg.ssim_lambda
             else:
-                # Mixed batch: real -> original loss, nerf_sample -> weighted L2 only.
+                # Mixed batch: real -> (L1 or L2)+SSIM, nerf_sample -> weighted L2 only.
                 per_sample_losses = []
-                real_l2_terms = []
+                real_recon_terms = []
                 real_ssim_terms = []
                 nerf_l2_terms = []
                 B = pixels.shape[0]
@@ -486,20 +487,24 @@ class Runner:
                         per_sample_losses.append(l2_weighted)
                         nerf_l2_terms.append(l2_weighted)
                     else:
-                        l2_b = F.mse_loss(colors[b : b + 1], pixels[b : b + 1])
+                        recon_b = (
+                            F.l1_loss(colors[b : b + 1], pixels[b : b + 1])
+                            if real_use_l1
+                            else F.mse_loss(colors[b : b + 1], pixels[b : b + 1])
+                        )
                         ssim_b = 1.0 - fused_ssim(
                             colors[b : b + 1].permute(0, 3, 1, 2),
                             pixels[b : b + 1].permute(0, 3, 1, 2),
                             padding="valid",
                         )
-                        real_loss_b = l2_b * (1.0 - cfg.ssim_lambda) + ssim_b * cfg.ssim_lambda
+                        real_loss_b = recon_b * (1.0 - cfg.ssim_lambda) + ssim_b * cfg.ssim_lambda
                         per_sample_losses.append(real_loss_b)
-                        real_l2_terms.append(l2_b)
+                        real_recon_terms.append(recon_b)
                         real_ssim_terms.append(ssim_b)
                 loss = torch.stack(per_sample_losses).mean()
-                l2loss = (
-                    torch.stack(real_l2_terms).mean()
-                    if len(real_l2_terms) > 0
+                real_recon_loss = (
+                    torch.stack(real_recon_terms).mean()
+                    if len(real_recon_terms) > 0
                     else torch.tensor(0.0, device=device)
                 )
                 ssimloss = (
@@ -566,7 +571,11 @@ class Runner:
             if world_rank == 0 and cfg.tb_every > 0 and step % cfg.tb_every == 0:
                 mem = torch.cuda.max_memory_allocated() / 1024**3
                 self.writer.add_scalar("train/loss", loss.item(), step)
-                self.writer.add_scalar("train/l2loss", l2loss.item(), step)
+                self.writer.add_scalar("train/reconloss", real_recon_loss.item(), step)
+                if real_use_l1:
+                    self.writer.add_scalar("train/l1loss", real_recon_loss.item(), step)
+                else:
+                    self.writer.add_scalar("train/l2loss", real_recon_loss.item(), step)
                 self.writer.add_scalar("train/ssimloss", ssimloss.item(), step)
                 self.writer.add_scalar("train/nerf_weighted_l2loss", nerf_l2loss.item(), step)
                 self.writer.add_scalar("train/nerf_sample_fraction", is_nerf_sample.float().mean().item(), step)

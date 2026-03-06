@@ -73,6 +73,9 @@ class Config:
     init_scale: float = 1.0
     # Weight for SSIM loss
     ssim_lambda: float = 0.2
+    # If True, real-image reconstruction term is L1; otherwise L2 (MSE).
+    # NeRF-sample supervision remains weighted L2 in all cases.
+    use_l1_for_real_samples: bool = False
 
     # Near plane clipping distance
     near_plane: float = 0.01

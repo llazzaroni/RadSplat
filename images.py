@@ -595,16 +595,14 @@ def build_final_dataset_from_tmp(
             p = md / f"nerf_sample_{i:03d}.png"
             imgs_i.append(np.array(Image.open(p).convert("RGB"), dtype=np.uint8))
 
-        # Keep variance-based weights, but write the first model image deterministically.
-        _, w_f32, _ = median_and_weights_from_ensemble(
+        # Original behavior: write ensemble median image and variance-based weights.
+        median_uint8, w_f32, _ = median_and_weights_from_ensemble(
             imgs_i, tau=tau, blur_ksize=blur_ksize, w_min=w_min
         )
-        chosen_model_idx = 0
-        chosen_img_uint8 = imgs_i[chosen_model_idx]
         if i == 0:
-            print(f"[image-selection] using fixed model index {chosen_model_idx} for sample {i}")
+            print(f"[image-selection] using ensemble median over {len(model_dirs)} models")
 
-        save_multiscale_nerf_sample(chosen_img_uint8, image_dirs, expected_sizes, i)
+        save_multiscale_nerf_sample(median_uint8, image_dirs, expected_sizes, i)
         save_multiscale_weights(w_f32, weight_dirs, expected_sizes, i)
         if debug_weights_dir is not None:
             save_weight_visualization(w_f32, debug_weights_dir, i)
@@ -798,7 +796,7 @@ def main(args):
         new_c2w_kept=new_c2w_kept2,
         tmp_root=tmp_root,
         render_scale=1.0,   # final dataset images: no extra downscale at render time
-        num_models_to_render=1,  # only first model for full-res generation
+        num_models_to_render=None,  # render all models for ensemble median
     )
 
     final_dir = build_final_dataset_from_tmp(
