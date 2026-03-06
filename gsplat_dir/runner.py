@@ -729,6 +729,8 @@ class Runner:
             if step % 100 == 0:
                 self.eval_allstats()
                 if world_rank == 0:
+                    with open(os.path.join(cfg.result_dir, "gsplat_stats.json"), "w", encoding="utf-8") as f:
+                        json.dump(self.stats_arr, f, indent=2, ensure_ascii=False)
                     training_time = time.time() - global_tic
                     out_path = os.path.join(cfg.result_dir, "time_logs.txt")
                     with open(out_path, "a") as f:

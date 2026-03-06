@@ -43,10 +43,15 @@ class Config:
     batch_size: int = 1
     # In dual-loader training, nerf batch size = batch_size * nerf_batch_factor.
     nerf_batch_factor: int = 2
-    # In dual-loader training, weight of real-image loss in the combined objective.
+    # In dual-loader training, constant weight for real-image loss.
     dual_real_loss_weight: float = 1.0
-    # In dual-loader training, weight of nerf-sample loss in the combined objective.
-    dual_nerf_loss_weight: float = 1.0
+    # In dual-loader training, initial weight for nerf-sample loss (step 0).
+    dual_nerf_loss_weight: float = 2.0
+    # Exponential decay parameterization: after this many steps, nerf weight is quartered
+    # (e.g. 2.0 -> 0.5).
+    dual_nerf_decay_steps_to_quarter: int = 1000
+    # Disable the nerf branch when the scheduled nerf weight falls below this threshold.
+    dual_nerf_disable_threshold: float = 0.1
     # A global factor to scale the number of training steps
     steps_scaler: float = 1.0
 

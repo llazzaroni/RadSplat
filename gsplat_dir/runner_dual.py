@@ -93,6 +93,12 @@ class RunnerDual(Runner):
             )
 
         real_items, nerf_items = self._build_dual_subsets()
+        decay_steps = max(1, int(getattr(cfg, "dual_nerf_decay_steps_to_quarter", 1000)))
+        nerf_decay_k = math.log(4.0) / float(decay_steps)
+        nerf_disable_threshold = float(getattr(cfg, "dual_nerf_disable_threshold", 0.1))
+        nerf_weight_start = float(getattr(cfg, "dual_nerf_loss_weight", 2.0))
+        nerf_branch_enabled = len(nerf_items) > 0
+        nerf_branch_disabled_printed = False
         if world_rank == 0:
             print(
                 f"[DualLoader] real train images={len(real_items)}, nerf samples={len(nerf_items)}, "
@@ -100,7 +106,8 @@ class RunnerDual(Runner):
             )
             print(
                 f"[DualLoss] real_weight={cfg.dual_real_loss_weight}, "
-                f"nerf_weight={cfg.dual_nerf_loss_weight}"
+                f"nerf_weight_schedule: w0={nerf_weight_start}, quarter_at={decay_steps}, "
+                f"disable_below={nerf_disable_threshold}"
             )
 
         real_loader = None
@@ -138,7 +145,18 @@ class RunnerDual(Runner):
                 tic = time.time()
 
             real_data, real_iter = self._next_batch(real_loader, real_iter)
-            nerf_data, nerf_iter = self._next_batch(nerf_loader, nerf_iter)
+            nerf_weight_sched = nerf_weight_start * math.exp(-nerf_decay_k * float(step))
+            if nerf_branch_enabled and nerf_weight_sched < nerf_disable_threshold:
+                nerf_branch_enabled = False
+                if world_rank == 0 and not nerf_branch_disabled_printed:
+                    print(
+                        f"[DualLoss] disabling nerf branch at step={step} "
+                        f"(scheduled nerf weight={nerf_weight_sched:.6f} < {nerf_disable_threshold})"
+                    )
+                    nerf_branch_disabled_printed = True
+            nerf_data, nerf_iter = (
+                self._next_batch(nerf_loader, nerf_iter) if nerf_branch_enabled else (None, nerf_iter)
+            )
 
             if real_data is None and nerf_data is None:
                 raise RuntimeError("Both real and nerf loaders are empty.")
@@ -317,7 +335,7 @@ class RunnerDual(Runner):
             )
 
             wr = float(cfg.dual_real_loss_weight) if real_data is not None else 0.0
-            wn = float(cfg.dual_nerf_loss_weight) if nerf_data is not None else 0.0
+            wn = float(nerf_weight_sched) if nerf_data is not None else 0.0
             wsum = wr + wn
             if wsum <= 0:
                 raise RuntimeError("dual_real_loss_weight + dual_nerf_loss_weight must be > 0.")
@@ -346,6 +364,7 @@ class RunnerDual(Runner):
                 self.writer.add_scalar("train/loss", loss.item(), step)
                 self.writer.add_scalar("train/real_loss", real_loss.item(), step)
                 self.writer.add_scalar("train/nerf_loss", nerf_loss.item(), step)
+                self.writer.add_scalar("train/nerf_weight_schedule", float(nerf_weight_sched), step)
                 self.writer.add_scalar("train/reconloss", real_recon_loss.item(), step)
                 if real_use_l1:
                     self.writer.add_scalar("train/l1loss", real_recon_loss.item(), step)
@@ -446,6 +465,8 @@ class RunnerDual(Runner):
             if step % 100 == 0:
                 self.eval_allstats()
                 if world_rank == 0:
+                    with open(os.path.join(cfg.result_dir, "gsplat_stats.json"), "w", encoding="utf-8") as f:
+                        json.dump(self.stats_arr, f, indent=2, ensure_ascii=False)
                     training_time = time.time() - global_tic
                     out_path = os.path.join(cfg.result_dir, "time_logs.txt")
                     with open(out_path, "a") as f:
