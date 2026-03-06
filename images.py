@@ -770,13 +770,14 @@ def main(args):
     print("initial number jitter", new_c2w_jitter.shape[0])
     print("number of kept", new_c2w_kept1.shape[0])
 
-    score1, mean_conf1, frac_conf1 = score_candidates_from_var_map(var_map_kept1, alpha=10.0)
-
-    K_keep = min(args.num_final_samples, score1.numel())
-    print(f"[phase] final selection keep={K_keep} (requested={args.num_final_samples}, available={score1.numel()})")
-    topk1 = torch.topk(score1, k=K_keep).indices
-
-    new_c2w_kept2 = new_c2w_kept1[topk1]
+    # Second stage: random subset from first-stage kept candidates.
+    K_keep = min(args.num_final_samples, new_c2w_kept1.shape[0])
+    print(
+        f"[phase] final selection keep={K_keep} "
+        f"(requested={args.num_final_samples}, available={new_c2w_kept1.shape[0]}) [random]"
+    )
+    rand_idx = torch.randperm(new_c2w_kept1.shape[0])[:K_keep]
+    new_c2w_kept2 = new_c2w_kept1[rand_idx]
 
     plot_new_samples(
         cam_positions,
