@@ -170,11 +170,11 @@ python images.py \
   --nerf-folders /cluster/scratch/rbollati/models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers_try/config.yml /cluster/scratch/rbollati/models/nerf_ensemble_2/outputs/ensemble_1/nerfacto/flowers_try/config.yml /cluster/scratch/rbollati/models/nerf_ensemble_3/outputs/ensemble_1/nerfacto/flowers_try/config.yml /cluster/scratch/rbollati/models/nerf_ensemble_4/outputs/ensemble_1/nerfacto/flowers_try/config.yml /cluster/scratch/rbollati/models/nerf_ensemble_5/outputs/ensemble_1/nerfacto/flowers_try/config.yml \
   --exp-dirs /cluster/scratch/rbollati/models/nerf_ensemble_1 /cluster/scratch/rbollati/models/nerf_ensemble_2 /cluster/scratch/rbollati/models/nerf_ensemble_3 /cluster/scratch/rbollati/models/nerf_ensemble_4 /cluster/scratch/rbollati/models/nerf_ensemble_5 \
   --input-dataset /cluster/scratch/rbollati/dataset/flowers_subset \
-  --output-dataset /cluster/scratch/rbollati/dataset/flowers_subset_aug \
+  --output-dataset /cluster/scratch/rbollati/dataset/flowers_subset_aug2 \
   --tmp-root /cluster/home/rbollati/tmp \
   --tau 1.5 \
   --debug-plot-dir image_supervision \
-  --num-final-samples 25 \
+  --num-final-samples 200 \
   --final-render-scale 0.125
 
 python utils/plot_gsplat_eval_stats.py \
@@ -232,11 +232,12 @@ python run_gsplat_dual.py default \
 python run_gsplat_dual.py default \
   --nerf-init \
   --pt-path /cluster/scratch/rbollati/models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers_try/ray_sample.pt \
-  --data-dir /cluster/scratch/rbollati/dataset/flowers_subset_aug \
-  --result-dir /cluster/scratch/rbollati/models/RadSplat_dual2 \
+  --data-dir /cluster/scratch/rbollati/dataset/flowers_subset_aug2 \
+  --result-dir /cluster/scratch/rbollati/models/RadSplat_dual3 \
   --data-factor 1 \
   --batch-size 1 \
-  --nerf-batch-factor 8 \
-  --dual-nerf-decay-steps-to-quarter 50 \
+  --nerf-samples-data-factor 8 \
+  --nerf-batch-factor 20 \
+  --dual-nerf-decay-steps-to-quarter 100 \
   --dual-nerf-disable-threshold 0.1
 
