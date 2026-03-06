@@ -17,7 +17,7 @@ from submodules.gsplat.examples.datasets.normalize import (
     transform_cameras,
     transform_points,
 )
-from submodules.gsplat.examples.datasets.colmap import _get_rel_paths, _resize_image_folder
+from submodules.gsplat.examples.datasets.colmap import _get_rel_paths
 
 
 def _norm_name(name: str) -> str:
@@ -172,9 +172,10 @@ class Parser:
             # Downsampled images may have different names vs images used for COLMAP.
             colmap_files = sorted(_get_rel_paths(colmap_image_dir))
             image_files = sorted(_get_rel_paths(image_dir))
-            if factor_value > 1 and len(image_files) > 0 and os.path.splitext(image_files[0])[1].lower() == ".jpg":
-                image_dir = _resize_image_folder(colmap_image_dir, image_dir + "_png", factor=factor_value)
-                image_files = sorted(_get_rel_paths(image_dir))
+            # Keep using the existing images_<factor> directory directly.
+            # Do not auto-generate images_<factor>_png caches, because we may have
+            # auxiliary factor-specific assets (e.g. weight maps) aligned to the
+            # existing folder naming/shape conventions.
             colmap_to_image = dict(zip(colmap_files, image_files))
             image_paths = [os.path.join(image_dir, colmap_to_image[f]) for f in image_names]
             return image_dir, image_paths
