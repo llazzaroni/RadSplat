@@ -41,6 +41,12 @@ class Config:
 
     # Batch size for training. Learning rates are scaled automatically
     batch_size: int = 1
+    # In dual-loader training, nerf batch size = batch_size * nerf_batch_factor.
+    nerf_batch_factor: int = 2
+    # In dual-loader training, weight of real-image loss in the combined objective.
+    dual_real_loss_weight: float = 1.0
+    # In dual-loader training, weight of nerf-sample loss in the combined objective.
+    dual_nerf_loss_weight: float = 1.0
     # A global factor to scale the number of training steps
     steps_scaler: float = 1.0
 

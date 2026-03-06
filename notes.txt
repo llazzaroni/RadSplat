@@ -174,7 +174,8 @@ python images.py \
   --tmp-root /cluster/home/rbollati/tmp \
   --tau 1.5 \
   --debug-plot-dir image_supervision \
-  --num-final-samples 50
+  --num-final-samples 25 \
+  --final-render-scale 0.125
 
 python utils/plot_gsplat_eval_stats.py \
   --run-dir /cluster/scratch/rbollati/models/RadSplat_baseline \
@@ -213,4 +214,14 @@ python run_gsplat.py default \
   --result-dir /cluster/scratch/rbollati/models/RadSplat_aug \
   --data-factor 1
 
+python run_gsplat_dual.py default \
+  --nerf-init \
+  --pt-path /cluster/scratch/rbollati/models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers_try/ray_sample.pt \
+  --data-dir /cluster/scratch/rbollati/dataset/flowers_regen_aug \
+  --result-dir /cluster/scratch/rbollati/models/RadSplat_dual \
+  --data-factor 1 \
+  --batch-size 1 \
+  --nerf-batch-factor 5 \
+  --dual-real-loss-weight 1.0 \
+  --dual-nerf-loss-weight 0.2
 
