@@ -59,6 +59,14 @@ class Config:
 
     # Number of training steps
     max_steps: int = 5_000
+    # Staged training: nerf-only phase steps (used by run_gsplat_staged.py).
+    staged_nerf_phase_steps: int = 0
+    # Staged training: real-only phase steps (used by run_gsplat_staged.py).
+    staged_real_phase_steps: int = 5_000
+    # If True, reset opacities to staged_reset_opacity_value at phase switch.
+    staged_reset_opacity_after_nerf: bool = True
+    # Opacity value to reset to at phase switch (sigmoid-space).
+    staged_reset_opacity_value: float = 0.1
     # Steps to evaluate the model
     eval_steps: List[int] = field(default_factory=lambda: [])
     # Steps to save the model
