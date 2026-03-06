@@ -449,22 +449,9 @@ def save_multiscale_nerf_sample(median_uint8, image_dirs, expected_sizes, index)
     img = Image.fromarray(median_uint8)
     fname = f"nerf_sample_{index:03d}.png"
 
-    # Save base resolution to images/
-    exp_w, exp_h = expected_sizes["images"]
-    if img.width != exp_w or img.height != exp_h:
-        raise RuntimeError(
-            f"Resolution mismatch for {fname} in images/: got (W={img.width}, H={img.height}), "
-            f"expected (W={exp_w}, H={exp_h})."
-        )
-    if index == 0:
-        print(f"[resolution-check] images -> generated (W={img.width}, H={img.height}), expected (W={exp_w}, H={exp_h})")
-    img.save(image_dirs["images"] / fname)
-
-    # Save downsampled versions to images_2, images_4, images_8
-    for scale, key in [(2, "images_2"), (4, "images_4"), (8, "images_8")]:
+    # Save to all target scales by matching exact expected dimensions.
+    for key in ["images", "images_2", "images_4", "images_8"]:
         exp_w, exp_h = expected_sizes[key]
-        # Match dataset target sizes exactly. For odd dimensions, integer division
-        # may differ by one pixel from precomputed multiscale folders.
         img_scale = img.resize((exp_w, exp_h), resample=Image.Resampling.LANCZOS)
         if img_scale.width != exp_w or img_scale.height != exp_h:
             raise RuntimeError(
@@ -481,24 +468,13 @@ def save_multiscale_nerf_sample(median_uint8, image_dirs, expected_sizes, index)
 def save_multiscale_weights(weight_map, weight_dirs, expected_sizes, index):
     fname = f"nerf_sample_{index:03d}.npy"
     weight_map = weight_map.astype(np.float32)
-    h, w = weight_map.shape
-    exp_w, exp_h = expected_sizes["images"]
-    if (w, h) != (exp_w, exp_h):
-        raise RuntimeError(
-            f"Weight resolution mismatch for {fname} in weights_nerf_samples/: got (W={w}, H={h}), "
-            f"expected (W={exp_w}, H={exp_h})."
-        )
-
-    np.save(weight_dirs["weights_nerf_samples"] / fname, weight_map)
-
-    for scale, key in [(2, "weights_nerf_samples_2"), (4, "weights_nerf_samples_4"), (8, "weights_nerf_samples_8")]:
+    for key in ["weights_nerf_samples", "weights_nerf_samples_2", "weights_nerf_samples_4", "weights_nerf_samples_8"]:
         img_key = key.replace("weights_nerf_samples", "images")
         exp_w, exp_h = expected_sizes[img_key]
-        new_w, new_h = exp_w, exp_h
-        weight_scale = cv2.resize(weight_map, (new_w, new_h), interpolation=cv2.INTER_AREA)
-        if (new_w, new_h) != (exp_w, exp_h):
+        weight_scale = cv2.resize(weight_map, (exp_w, exp_h), interpolation=cv2.INTER_AREA)
+        if weight_scale.shape != (exp_h, exp_w):
             raise RuntimeError(
-                f"Weight resolution mismatch for {fname} in {key}/: got (W={new_w}, H={new_h}), "
+                f"Weight resolution mismatch for {fname} in {key}/: got (W={weight_scale.shape[1]}, H={weight_scale.shape[0]}), "
                 f"expected (W={exp_w}, H={exp_h})."
             )
         np.save(weight_dirs[key] / fname, weight_scale.astype(np.float32))
@@ -796,7 +772,7 @@ def main(args):
         exp_dirs=exp_dirs,
         new_c2w_kept=new_c2w_kept2,
         tmp_root=tmp_root,
-        render_scale=1.0,   # final dataset images: no extra downscale at render time
+        render_scale=args.final_render_scale,
         num_models_to_render=None,  # render all models for ensemble median
     )
 
@@ -828,6 +804,13 @@ if __name__ == "__main__":
     p.add_argument("--output-dataset", required=True)
     p.add_argument("--tmp-root", default="/tmp")          # or your scratch path
     p.add_argument("--tau", type=float, default=1.5)
+    p.add_argument(
+        "--final-render-scale",
+        type=float,
+        default=1.0,
+        help="Scale used to render final kept NeRF samples before writing multiscale folders. "
+             "Use 0.125 to render at roughly images_8 resolution then upsample.",
+    )
     p.add_argument("--debug-plot-dir", default="image_supervision")
     p.add_argument(
         "--num-final-samples",
