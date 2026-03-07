@@ -195,13 +195,11 @@ python utils/plot_gsplat_eval_stats.py \
   --run-dir /cluster/scratch/rbollati/models/RadSplat_baseline \
   --run-dir /cluster/scratch/rbollati/models/GSplat_sfm_baseline \
   --run-dir /cluster/scratch/rbollati/models/RadSplat_aug \
-  --run-dir /cluster/scratch/rbollati/models/RadSplat_dual \
-  --run-dir /cluster/scratch/rbollati/models/RadSplat_dual3 \
+  --run-dir /cluster/scratch/rbollati/models/RadSplat_staged \
   --label radsplat \
   --label gsplat-sfm \
   --label radsplat-aug \
-  --label radsplat-dual \
-  --label radsplat-dual3 \
+  --label radsplat-staged \
   --out-dir /cluster/scratch/rbollati/plots
 
 python run_gsplat.py default \
@@ -252,7 +250,7 @@ python run_gsplat_staged.py default \
   --nerf-batch-factor 20 \
   --staged-nerf-phase-steps 300 \
   --staged-real-phase-steps 5000 \
-  --staged-reset-opacity-after-nerf True \
+  --staged-reset-opacity-after-nerf \
   --staged-reset-opacity-value 0.1
 
 

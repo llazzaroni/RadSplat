@@ -171,6 +171,8 @@ class RunnerStaged(Runner):
                 tic = time.time()
 
             in_nerf_phase = (step < nerf_phase_steps)
+            real_phase_step = max(0, step - nerf_phase_steps)
+            strategy_active = not in_nerf_phase
             if in_nerf_phase and not switched_to_real and world_rank == 0 and step == 0:
                 print("[Staged] phase=nerf-only")
             if (not in_nerf_phase) and not switched_to_real:
@@ -214,7 +216,8 @@ class RunnerStaged(Runner):
             if cfg.pose_opt:
                 camtoworlds = self.pose_adjust(camtoworlds, image_ids)
 
-            sh_degree_to_use = min(step // cfg.sh_degree_interval, cfg.sh_degree)
+            # Keep SH/strategy schedule tied to real-image phase progression.
+            sh_degree_to_use = min(real_phase_step // cfg.sh_degree_interval, cfg.sh_degree)
             renders, alphas, info = self.rasterize_splats(
                 camtoworlds=camtoworlds,
                 Ks=Ks,
@@ -250,13 +253,14 @@ class RunnerStaged(Runner):
                 bkgd = torch.rand(1, 3, device=device)
                 colors = colors + bkgd * (1.0 - alphas)
 
-            self.cfg.strategy.step_pre_backward(
-                params=self.splats,
-                optimizers=self.optimizers,
-                state=self.strategy_state,
-                step=step,
-                info=info,
-            )
+            if strategy_active:
+                self.cfg.strategy.step_pre_backward(
+                    params=self.splats,
+                    optimizers=self.optimizers,
+                    state=self.strategy_state,
+                    step=real_phase_step,
+                    info=info,
+                )
 
             depthloss: Optional[torch.Tensor] = None
             if in_nerf_phase:
@@ -390,36 +394,42 @@ class RunnerStaged(Runner):
             for scheduler in schedulers:
                 scheduler.step()
 
-            if isinstance(self.cfg.strategy, DefaultStrategy):
-                self.cfg.strategy.step_post_backward(
-                    params=self.splats,
-                    optimizers=self.optimizers,
-                    state=self.strategy_state,
-                    step=step,
-                    info=info,
-                    packed=cfg.packed,
-                )
-            elif isinstance(self.cfg.strategy, MCMCStrategy):
-                self.cfg.strategy.step_post_backward(
-                    params=self.splats,
-                    optimizers=self.optimizers,
-                    state=self.strategy_state,
-                    step=step,
-                    info=info,
-                    lr=schedulers[0].get_last_lr()[0],
-                )
-            else:
-                assert_never(self.cfg.strategy)
+            if strategy_active:
+                if isinstance(self.cfg.strategy, DefaultStrategy):
+                    self.cfg.strategy.step_post_backward(
+                        params=self.splats,
+                        optimizers=self.optimizers,
+                        state=self.strategy_state,
+                        step=real_phase_step,
+                        info=info,
+                        packed=cfg.packed,
+                    )
+                elif isinstance(self.cfg.strategy, MCMCStrategy):
+                    self.cfg.strategy.step_post_backward(
+                        params=self.splats,
+                        optimizers=self.optimizers,
+                        state=self.strategy_state,
+                        step=real_phase_step,
+                        info=info,
+                        lr=schedulers[0].get_last_lr()[0],
+                    )
+                else:
+                    assert_never(self.cfg.strategy)
 
-            if step % 100 == 0:
+            # Eval timeline starts at real phase step 0 (nerf warmup steps are ignored).
+            real_phase_step = step - nerf_phase_steps
+            if real_phase_step >= 0 and real_phase_step % 100 == 0:
                 self.eval_allstats()
+                if len(self.stats_arr) > 0:
+                    self.stats_arr[-1]["step"] = int(real_phase_step)
+                    self.stats_arr[-1]["global_step"] = int(step)
                 if world_rank == 0:
                     with open(os.path.join(cfg.result_dir, "gsplat_stats.json"), "w", encoding="utf-8") as f:
                         json.dump(self.stats_arr, f, indent=2, ensure_ascii=False)
                     training_time = time.time() - global_tic
                     out_path = os.path.join(cfg.result_dir, "time_logs.txt")
                     with open(out_path, "a") as f:
-                        f.write(f"[gaussian-splatting-{step}] - {training_time}\n")
+                        f.write(f"[gaussian-splatting-{real_phase_step}] - {training_time}\n")
 
             if cfg.compression is not None and step in [i - 1 for i in cfg.eval_steps]:
                 self.run_compression(step=step)
