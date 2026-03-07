@@ -11,6 +11,7 @@ from fused_ssim import fused_ssim
 from torch.utils.data import DataLoader, Subset
 from typing_extensions import assert_never
 
+from gsplat_dir.colmap import Dataset as ColmapDataset
 from gsplat_dir.runner import Runner
 from submodules.gsplat.gsplat.strategy import DefaultStrategy, MCMCStrategy
 
@@ -133,9 +134,14 @@ class RunnerStaged(Runner):
                 f"[Staged] real train images={len(real_items)}, nerf samples={len(nerf_items)}, "
                 f"real_bs={cfg.batch_size}, nerf_bs={max(1, cfg.batch_size * cfg.nerf_batch_factor)}"
             )
+            print(
+                f"[Staged] include real images in nerf phase: "
+                f"{bool(getattr(cfg, 'staged_include_real_in_nerf_phase', False))}"
+            )
 
         real_loader = None
         nerf_loader = None
+        pretrain_loader = None
         if len(real_items) > 0:
             real_loader = DataLoader(
                 Subset(self.trainset, real_items),
@@ -154,9 +160,26 @@ class RunnerStaged(Runner):
                 persistent_workers=True,
                 pin_memory=True,
             )
+        if bool(getattr(cfg, "staged_include_real_in_nerf_phase", False)):
+            pretrain_dataset = ColmapDataset(
+                self.parser,
+                split="train",
+                patch_size=cfg.patch_size,
+                load_depths=False,
+                use_nerf_factor_for_real=True,
+            )
+            pretrain_loader = DataLoader(
+                pretrain_dataset,
+                batch_size=max(1, cfg.batch_size * cfg.nerf_batch_factor),
+                shuffle=True,
+                num_workers=4,
+                persistent_workers=True,
+                pin_memory=True,
+            )
 
         real_iter = None
         nerf_iter = None
+        pretrain_iter = None
         real_use_l1 = bool(getattr(cfg, "use_l1_for_real_samples", False))
         schedulers = self._build_schedulers(max_steps)
         switched_to_real = False
@@ -187,9 +210,12 @@ class RunnerStaged(Runner):
                         )
                 schedulers = self._reset_phase_optimizers(real_phase_steps)
 
-            data, real_iter_or_nerf_iter = (None, None)
+            data = None
             if in_nerf_phase:
-                data, nerf_iter = self._next_batch(nerf_loader, nerf_iter)
+                if pretrain_loader is not None:
+                    data, pretrain_iter = self._next_batch(pretrain_loader, pretrain_iter)
+                else:
+                    data, nerf_iter = self._next_batch(nerf_loader, nerf_iter)
                 if data is None:
                     raise RuntimeError("Nerf phase requested but nerf loader is empty.")
             else:
@@ -264,16 +290,64 @@ class RunnerStaged(Runner):
 
             depthloss: Optional[torch.Tensor] = None
             if in_nerf_phase:
-                if not bool(is_nerf_sample.all().item()):
-                    raise RuntimeError("Nerf phase batch contains real images.")
-                l2_map = ((colors - pixels) ** 2).mean(dim=-1)
-                w = torch.clamp(weight_maps, min=0.0)
-                denom = torch.clamp(w.sum(dim=(1, 2)), min=1e-8)
-                nerf_l2loss = ((l2_map * w).sum(dim=(1, 2)) / denom).mean()
-                real_recon_loss = torch.tensor(0.0, device=device)
-                ssimloss = torch.tensor(0.0, device=device)
-                loss = nerf_l2loss
-                real_loss = torch.tensor(0.0, device=device)
+                if pretrain_loader is None:
+                    if not bool(is_nerf_sample.all().item()):
+                        raise RuntimeError("Nerf phase batch contains real images.")
+                    l2_map = ((colors - pixels) ** 2).mean(dim=-1)
+                    w = torch.clamp(weight_maps, min=0.0)
+                    denom = torch.clamp(w.sum(dim=(1, 2)), min=1e-8)
+                    nerf_l2loss = ((l2_map * w).sum(dim=(1, 2)) / denom).mean()
+                    real_recon_loss = torch.tensor(0.0, device=device)
+                    ssimloss = torch.tensor(0.0, device=device)
+                    loss = nerf_l2loss
+                    real_loss = torch.tensor(0.0, device=device)
+                else:
+                    # Mixed pretraining batch: real -> recon+ssim, nerf -> weighted l2.
+                    per_sample_losses = []
+                    real_recon_terms = []
+                    real_ssim_terms = []
+                    nerf_l2_terms = []
+                    B = pixels.shape[0]
+                    for b in range(B):
+                        if bool(is_nerf_sample[b].item()):
+                            l2_map_b = ((colors[b] - pixels[b]) ** 2).mean(dim=-1)
+                            w = torch.clamp(weight_maps[b], min=0.0)
+                            denom = torch.clamp(w.sum(), min=1e-8)
+                            l2_weighted = (l2_map_b * w).sum() / denom
+                            per_sample_losses.append(l2_weighted)
+                            nerf_l2_terms.append(l2_weighted)
+                        else:
+                            recon_b = (
+                                F.l1_loss(colors[b : b + 1], pixels[b : b + 1])
+                                if real_use_l1
+                                else F.mse_loss(colors[b : b + 1], pixels[b : b + 1])
+                            )
+                            ssim_b = 1.0 - fused_ssim(
+                                colors[b : b + 1].permute(0, 3, 1, 2),
+                                pixels[b : b + 1].permute(0, 3, 1, 2),
+                                padding="valid",
+                            )
+                            real_loss_b = recon_b * (1.0 - cfg.ssim_lambda) + ssim_b * cfg.ssim_lambda
+                            per_sample_losses.append(real_loss_b)
+                            real_recon_terms.append(recon_b)
+                            real_ssim_terms.append(ssim_b)
+                    loss = torch.stack(per_sample_losses).mean()
+                    real_recon_loss = (
+                        torch.stack(real_recon_terms).mean()
+                        if len(real_recon_terms) > 0
+                        else torch.tensor(0.0, device=device)
+                    )
+                    ssimloss = (
+                        torch.stack(real_ssim_terms).mean()
+                        if len(real_ssim_terms) > 0
+                        else torch.tensor(0.0, device=device)
+                    )
+                    real_loss = real_recon_loss * (1.0 - cfg.ssim_lambda) + ssimloss * cfg.ssim_lambda
+                    nerf_l2loss = (
+                        torch.stack(nerf_l2_terms).mean()
+                        if len(nerf_l2_terms) > 0
+                        else torch.tensor(0.0, device=device)
+                    )
             else:
                 if bool(is_nerf_sample.any().item()):
                     raise RuntimeError("Real phase batch contains nerf samples.")

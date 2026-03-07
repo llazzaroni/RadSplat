@@ -438,11 +438,13 @@ class Dataset:
         split: str = "train",
         patch_size: Optional[int] = None,
         load_depths: bool = False,
+        use_nerf_factor_for_real: bool = False,
     ):
         self.parser = parser
         self.split = split
         self.patch_size = patch_size
         self.load_depths = load_depths
+        self.use_nerf_factor_for_real = use_nerf_factor_for_real
         if self.parser.train_indices_override is not None:
             if split == "train":
                 self.indices = self.parser.train_indices_override
@@ -466,7 +468,7 @@ class Dataset:
         is_nerf_sample = os.path.basename(image_name).startswith("nerf_sample_")
         image_path = (
             self.parser.image_paths_nerf[index]
-            if is_nerf_sample and hasattr(self.parser, "image_paths_nerf")
+            if (is_nerf_sample or self.use_nerf_factor_for_real) and hasattr(self.parser, "image_paths_nerf")
             else self.parser.image_paths[index]
         )
         image = imageio.imread(image_path)[..., :3]

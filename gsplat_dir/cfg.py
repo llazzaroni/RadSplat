@@ -61,6 +61,9 @@ class Config:
     max_steps: int = 5_000
     # Staged training: nerf-only phase steps (used by run_gsplat_staged.py).
     staged_nerf_phase_steps: int = 0
+    # If True, staged pretraining phase uses both real + nerf samples
+    # (with real images loaded at nerf_samples_data_factor resolution).
+    staged_include_real_in_nerf_phase: bool = False
     # Staged training: real-only phase steps (used by run_gsplat_staged.py).
     staged_real_phase_steps: int = 5_000
     # If True, reset opacities to staged_reset_opacity_value at phase switch.
