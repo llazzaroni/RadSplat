@@ -264,6 +264,12 @@ def filter_candidates_by_ensemble_variance(
 
 def filter_candidates_from_var_map(var_map, new_c2w, alpha=10.0, tau_mean=0.18, tau_pix=0.20, kappa=0.20, eps=1e-8):
     N = var_map.shape[0]
+    if N == 0:
+        keep_mask = torch.zeros((0,), dtype=torch.bool, device=var_map.device)
+        return new_c2w[keep_mask], keep_mask, {
+            "mean_conf": torch.empty((0,), device=var_map.device),
+            "frac_conf": torch.empty((0,), device=var_map.device),
+        }
 
     denom = var_map.flatten(1).median(dim=1).values
     denom = torch.clamp(denom, min=1e-6).view(N,1,1)
@@ -276,7 +282,10 @@ def filter_candidates_from_var_map(var_map, new_c2w, alpha=10.0, tau_mean=0.18, 
     scores = mean_conf.clone()
 
     #K = min(300, int(0.35 * scores.numel()))
-    K = 500
+    K = min(500, scores.numel())
+    if K <= 0:
+        keep_mask = torch.zeros_like(scores, dtype=torch.bool)
+        return new_c2w[keep_mask], keep_mask, {"mean_conf": mean_conf, "frac_conf": frac_conf}
     topk = torch.topk(scores, k=K).indices
     keep_mask = torch.zeros_like(scores, dtype=torch.bool)
     keep_mask[topk] = True
