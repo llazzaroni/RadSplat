@@ -60,8 +60,10 @@ EXTRA
 python run_gsplat.py default \
   --no-nerf-init \
   --init-type sfm \
-  --data-dir /cluster/scratch/rbollati/dataset/flowers \
-  --result-dir /cluster/scratch/rbollati/models/gsplat_try \
+  --pt-path /cluster/scratch/rbollati/models/nerf_ensemble_11/outputs/ensemble_1/nerfacto/flowers_try/ray_sample.pt \
+  --data-dir /cluster/scratch/rbollati/dataset/flowers_subset2 \
+  --result-dir /cluster/scratch/rbollati/models/Gsplat_sfm_baseline_full \
+  --max-steps 30000 \
   --data-factor 1
 
 
@@ -152,17 +154,17 @@ python utils/sample_multiscale_dataset.py \
   --seed 42
 
 
-python ~/RadsSplat/RadSplat/nerf_step.py \
-  --nerf-folder /cluster/scratch/rbollati/models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers_try/config.yml \
-  --output-name /cluster/scratch/rbollati/models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers_try/ray_sample.pt \
-  --sampling-size 1000000 \
+python ~/RadSplat/RadSplat/nerf_step.py \
+  --nerf-folder /cluster/scratch/rbollati/models/nerf_ensemble_12/outputs/ensemble_1/nerfacto/flowers_try/config.yml \
+  --output-name /cluster/scratch/rbollati/models/nerf_ensemble_13/outputs/ensemble_1/nerfacto/flowers_try/ray_sample.pt \
+  --sampling-size 25000 \
   --ray-sampling-strategy random
 
 python run_gsplat.py default \
   --nerf-init \
-  --pt-path /cluster/scratch/rbollati/models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers_try/ray_sample.pt \
-  --data-dir /cluster/scratch/rbollati/dataset/flowers_regen \
-  --result-dir /cluster/scratch/rbollati/models/RadSplat_baseline \
+  --pt-path /cluster/scratch/rbollati/models/nerf_ensemble_13/outputs/ensemble_1/nerfacto/flowers_try/ray_sample.pt \
+  --data-dir /cluster/scratch/rbollati/dataset/flowers_subset2 \
+  --result-dir /cluster/scratch/rbollati/models/RadSplat_baseline4 \
   --data-factor 1
 
 
@@ -192,21 +194,18 @@ python run_gsplat.py default \
   --data-factor 1
 
 python utils/plot_gsplat_eval_stats.py \
-  --run-dir /cluster/scratch/rbollati/models/RadSplat_baseline \
-  --run-dir /cluster/scratch/rbollati/models/GSplat_sfm_baseline \
-  --run-dir /cluster/scratch/rbollati/models/RadSplat_aug \
-  --run-dir /cluster/scratch/rbollati/models/RadSplat_staged2 \
-  --label radsplat \
+  --run-dir /cluster/scratch/rbollati/models/Gsplat_sfm_baseline_full \
+  --run-dir /cluster/scratch/rbollati/models/RadSplat_dual5 \
   --label gsplat-sfm \
-  --label radsplat-aug \
-  --label radsplat-staged \
-  --out-dir /cluster/scratch/rbollati/plots
+  --label radsplat-dual-sfm \
+  --out-dir /cluster/scratch/rbollati/plots \
+  --plot-style lines
 
 python run_gsplat.py default \
   --no-nerf-init \
   --init-type sfm \
-  --data-dir /cluster/scratch/rbollati/dataset/flowers_subset \
-  --result-dir /cluster/scratch/rbollati/models/GSplat_sfm_baseline \
+  --data-dir /cluster/scratch/rbollati/dataset/flowers_subset2 \
+  --result-dir /cluster/scratch/rbollati/models/GSplat_sfm_baseline2 \
   --data-factor 1
 
 python run_gsplat.py default \
@@ -255,9 +254,9 @@ python run_gsplat_staged.py default \
 
 python run_gsplat_staged.py default \
   --nerf-init \
-  --pt-path /cluster/scratch/rbollati/models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers_try/ray_sample.pt \
-  --data-dir /cluster/scratch/rbollati/dataset/flowers_subset_aug2 \
-  --result-dir /cluster/scratch/rbollati/models/RadSplat_staged2 \
+  --pt-path /cluster/scratch/rbollati/models/nerf_ensemble_13/outputs/ensemble_1/nerfacto/flowers_try/ray_sample.pt \
+  --data-dir /cluster/scratch/rbollati/dataset/flowers_subset_aug3 \
+  --result-dir /cluster/scratch/rbollati/models/RadSplat_staged5 \
   --data-factor 1 \
   --nerf-samples-data-factor 8 \
   --batch-size 1 \
@@ -267,5 +266,38 @@ python run_gsplat_staged.py default \
   --staged-reset-opacity-after-nerf \
   --staged-reset-opacity-value 0.1 \
   --staged-include-real-in-nerf-phase
+
+python run_gsplat_staged.py default \
+  --no-nerf-init \
+  --pt-path /cluster/scratch/rbollati/models/nerf_ensemble_11/outputs/ensemble_1/nerfacto/flowers_try/ray_sample.pt \
+  --data-dir /cluster/scratch/rbollati/dataset/flowers_subset_aug3 \
+  --result-dir /cluster/scratch/rbollati/models/RadSplat_staged6 \
+  --data-factor 1 \
+  --nerf-samples-data-factor 8 \
+  --batch-size 1 \
+  --nerf-batch-factor 20 \
+  --staged-nerf-phase-steps 300 \
+  --staged-real-phase-steps 5000 \
+  --staged-reset-opacity-after-nerf \
+  --staged-reset-opacity-value 0.1
+
+
+
+
+BETTER THAN SFM!!
+python run_gsplat_dual.py default \
+  --no-nerf-init \
+  --pt-path /cluster/scratch/rbollati/models/nerf_ensemble_11/outputs/ensemble_1/nerfacto/flowers_try/ray_sample.pt \
+  --data-dir /cluster/scratch/rbollati/dataset/flowers_subset_aug3 \
+  --result-dir /cluster/scratch/rbollati/models/RadSplat_dual5 \
+  --data-factor 1 \
+  --nerf-samples-data-factor 8 \
+  --batch-size 1 \
+  --nerf-batch-factor 20 \
+  --dual-nerf-decay-steps-to-quarter 300 \
+  --dual-nerf-disable-threshold 0.1 \
+  --max-steps 30000
+
+
 
 

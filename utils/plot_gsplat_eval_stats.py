@@ -79,7 +79,13 @@ def _load_run(
     return rows, used_source
 
 
-def plot_metrics(rows: List[Tuple[int, Dict]], out_dir: Path, title_prefix: str) -> None:
+def _marker_for_style(plot_style: str) -> str:
+    return "o" if plot_style == "points" else ""
+
+
+def plot_metrics(
+    rows: List[Tuple[int, Dict]], out_dir: Path, title_prefix: str, plot_style: str = "points"
+) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     series = _collect_metric_series(rows)
     if not series:
@@ -104,7 +110,7 @@ def plot_metrics(rows: List[Tuple[int, Dict]], out_dir: Path, title_prefix: str)
     for metric in metric_names:
         xs, ys = series[metric]
         plt.figure(figsize=(7, 4))
-        plt.plot(xs, ys, marker="o", linewidth=1.5)
+        plt.plot(xs, ys, marker=_marker_for_style(plot_style), linewidth=1.5)
         plt.xlabel("Step")
         plt.ylabel(metric)
         plt.title(f"{title_prefix} - {metric}")
@@ -121,7 +127,7 @@ def plot_metrics(rows: List[Tuple[int, Dict]], out_dir: Path, title_prefix: str)
             axes = [axes]
         for ax, metric in zip(axes, combo):
             xs, ys = series[metric]
-            ax.plot(xs, ys, marker="o", linewidth=1.5)
+            ax.plot(xs, ys, marker=_marker_for_style(plot_style), linewidth=1.5)
             ax.set_title(metric)
             ax.set_xlabel("Step")
             ax.grid(True, alpha=0.3)
@@ -132,7 +138,7 @@ def plot_metrics(rows: List[Tuple[int, Dict]], out_dir: Path, title_prefix: str)
 
 
 def plot_comparison(
-    all_series: Dict[str, Dict[str, Tuple[List[int], List[float]]]], out_dir: Path
+    all_series: Dict[str, Dict[str, Tuple[List[int], List[float]]]], out_dir: Path, plot_style: str = "points"
 ) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     metrics = sorted(
@@ -165,7 +171,7 @@ def plot_comparison(
             xs, ys = run_metrics[metric]
             if len(xs) == 0:
                 continue
-            plt.plot(xs, ys, marker="o", linewidth=1.5, label=label)
+            plt.plot(xs, ys, marker=_marker_for_style(plot_style), linewidth=1.5, label=label)
             plotted = True
         if not plotted:
             plt.close()
@@ -189,7 +195,7 @@ def plot_comparison(
                 if metric not in run_metrics:
                     continue
                 xs, ys = run_metrics[metric]
-                ax.plot(xs, ys, marker="o", linewidth=1.5, label=label)
+                ax.plot(xs, ys, marker=_marker_for_style(plot_style), linewidth=1.5, label=label)
             ax.set_title(metric)
             ax.set_xlabel("Step")
             ax.grid(True, alpha=0.3)
@@ -233,6 +239,12 @@ def main() -> None:
         help="Step interval to infer steps for gsplat_stats.json entries.",
     )
     parser.add_argument(
+        "--plot-style",
+        choices=["points", "lines"],
+        default="points",
+        help="Plot style: 'points' (default) uses markers; 'lines' uses line-only.",
+    )
+    parser.add_argument(
         "--out-dir",
         type=Path,
         default=None,
@@ -262,7 +274,7 @@ def main() -> None:
                 "No stats found. Expected either "
                 f"'{stats_glob}/*_stepXXXX.json' or '{agg_file}'."
             )
-        plot_metrics(rows, out_dir, title_prefix=f"GSplat ({used_source})")
+        plot_metrics(rows, out_dir, title_prefix=f"GSplat ({used_source})", plot_style=args.plot_style)
         print(f"Plotted {len(rows)} points from {used_source} into: {out_dir}")
         return
 
@@ -285,7 +297,7 @@ def main() -> None:
     if not all_series:
         raise RuntimeError("No valid runs to compare.")
 
-    plot_comparison(all_series, out_dir=out_dir)
+    plot_comparison(all_series, out_dir=out_dir, plot_style=args.plot_style)
     print(f"Comparison plots written to: {out_dir}")
 
 
