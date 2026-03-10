@@ -162,10 +162,11 @@ python ~/RadSplat/RadSplat/nerf_step.py \
 
 python run_gsplat.py default \
   --nerf-init \
-  --pt-path /cluster/scratch/rbollati/models/nerf_ensemble_13/outputs/ensemble_1/nerfacto/flowers_try/ray_sample.pt \
+  --pt-path /cluster/scratch/rbollati/models/nerf_ensemble_11/outputs/ensemble_1/nerfacto/flowers_try/ray_sample.pt \
   --data-dir /cluster/scratch/rbollati/dataset/flowers_subset2 \
-  --result-dir /cluster/scratch/rbollati/models/RadSplat_baseline4 \
-  --data-factor 1
+  --result-dir /cluster/scratch/rbollati/models/RadSplat_baseline_1000000_full \
+  --data-factor 1 \
+  --max-steps 30000
 
 
 python images.py \
@@ -194,10 +195,16 @@ python run_gsplat.py default \
   --data-factor 1
 
 python utils/plot_gsplat_eval_stats.py \
-  --run-dir /cluster/scratch/rbollati/models/Gsplat_sfm_baseline_full \
-  --run-dir /cluster/scratch/rbollati/models/RadSplat_dual5 \
+  --run-dir /cluster/scratch/rbollati/models/Gsplat_sfm_baseline_full_nores \
+  --run-dir /cluster/scratch/rbollati/models/RadSplat_dual_full_nores \
+  --run-dir /cluster/scratch/rbollati/models/Gsplat_sfm_baseline_full_nores_l1 \
+  --run-dir /cluster/scratch/rbollati/models/RadSplat_dual_full_nores_l1 \
+  --run-dir /cluster/scratch/rbollati/models/RadSplat_dual_full_nores_l1_2 \
   --label gsplat-sfm \
   --label radsplat-dual-sfm \
+  --label gsplat-sfm-l1 \
+  --label radsplat-sfm-l1 \
+  --label radsplat-sfm-l1-2 \
   --out-dir /cluster/scratch/rbollati/plots \
   --plot-style lines
 
@@ -282,6 +289,40 @@ python run_gsplat_staged.py default \
   --staged-reset-opacity-value 0.1
 
 
+python run_gsplat.py default \
+  --no-nerf-init \
+  --init-type sfm \
+  --pt-path /cluster/scratch/rbollati/models/nerf_ensemble_11/outputs/ensemble_1/nerfacto/flowers_try/ray_sample.pt \
+  --data-dir /cluster/scratch/rbollati/dataset/flowers_subset2 \
+  --result-dir /cluster/scratch/rbollati/models/Gsplat_sfm_baseline_full_nores_l1 \
+  --max-steps 30000 \
+  --data-factor 1 \
+  --strategy.reset-every 100000000 \
+  --use-l1-for-real-samples True
+
+python - <<'PY' /cluster/scratch/rbollati/models/RadSplat_dual_full_nores 15000
+import json, sys, pathlib
+run_dir = pathlib.Path(sys.argv[1])
+step = int(sys.argv[2])
+p = run_dir / "gsplat_stats.json"
+arr = json.load(open(p))
+if not isinstance(arr, list) or len(arr) == 0:
+    raise SystemExit(f"No stats in {p}")
+
+# Exact step if present, else fallback to index=step//100 (default logging interval)
+row = next((x for x in arr if isinstance(x, dict) and x.get("step") == step), None)
+if row is None:
+    idx = step // 100
+    if idx >= len(arr):
+        raise SystemExit(f"Step {step} not found, max approx step is {(len(arr)-1)*100}")
+    row = arr[idx]
+
+print(f"metrics at step {step}:")
+for k, v in row.items():
+    if isinstance(v, (int, float)):
+        print(f"{k}: {v}")
+PY
+
 
 
 BETTER THAN SFM!!
@@ -289,14 +330,17 @@ python run_gsplat_dual.py default \
   --no-nerf-init \
   --pt-path /cluster/scratch/rbollati/models/nerf_ensemble_11/outputs/ensemble_1/nerfacto/flowers_try/ray_sample.pt \
   --data-dir /cluster/scratch/rbollati/dataset/flowers_subset_aug3 \
-  --result-dir /cluster/scratch/rbollati/models/RadSplat_dual5 \
+  --result-dir /cluster/scratch/rbollati/models/RadSplat_dual_full_nores_l1 \
   --data-factor 1 \
   --nerf-samples-data-factor 8 \
   --batch-size 1 \
   --nerf-batch-factor 20 \
   --dual-nerf-decay-steps-to-quarter 300 \
   --dual-nerf-disable-threshold 0.1 \
-  --max-steps 30000
+  --max-steps 30000 \
+  --strategy.reset-every 100000000 \
+  --use-l1-for-real-samples \
+  --dual-nerf-loss-weight 1.0
 
 
 

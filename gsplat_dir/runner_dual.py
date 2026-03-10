@@ -134,6 +134,7 @@ class RunnerDual(Runner):
         real_iter = None
         nerf_iter = None
         real_use_l1 = bool(getattr(cfg, "use_l1_for_real_samples", False))
+        nerf_use_l1 = bool(getattr(cfg, "use_l1_for_nerf_samples", False))
 
         global_tic = time.time()
         pbar = tqdm.tqdm(range(init_step, max_steps))
@@ -175,7 +176,7 @@ class RunnerDual(Runner):
             pose_err = None
 
             nerf_loss = torch.tensor(0.0, device=device)
-            nerf_l2loss = torch.tensor(0.0, device=device)
+            nerf_reconloss = torch.tensor(0.0, device=device)
             nerf_info = None
             nerf_Ks = None
 
@@ -313,12 +314,15 @@ class RunnerDual(Runner):
                     bkgd = torch.rand(1, 3, device=device)
                     colors = colors + bkgd * (1.0 - alphas)
 
-                l2_map = ((colors - pixels) ** 2).mean(dim=-1)
+                if nerf_use_l1:
+                    recon_map = torch.abs(colors - pixels).mean(dim=-1)
+                else:
+                    recon_map = ((colors - pixels) ** 2).mean(dim=-1)
                 w = torch.clamp(weight_maps, min=0.0)
                 denom = torch.clamp(w.sum(dim=(1, 2)), min=1e-8)
-                per_img = (l2_map * w).sum(dim=(1, 2)) / denom
-                nerf_l2loss = per_img.mean()
-                nerf_loss = nerf_l2loss
+                per_img = (recon_map * w).sum(dim=(1, 2)) / denom
+                nerf_reconloss = per_img.mean()
+                nerf_loss = nerf_reconloss
 
                 nerf_info = info
                 nerf_Ks = Ks
@@ -371,7 +375,11 @@ class RunnerDual(Runner):
                 else:
                     self.writer.add_scalar("train/l2loss", real_recon_loss.item(), step)
                 self.writer.add_scalar("train/ssimloss", ssimloss.item(), step)
-                self.writer.add_scalar("train/nerf_weighted_l2loss", nerf_l2loss.item(), step)
+                self.writer.add_scalar("train/nerf_weighted_reconloss", nerf_reconloss.item(), step)
+                if nerf_use_l1:
+                    self.writer.add_scalar("train/nerf_weighted_l1loss", nerf_reconloss.item(), step)
+                else:
+                    self.writer.add_scalar("train/nerf_weighted_l2loss", nerf_reconloss.item(), step)
                 self.writer.add_scalar(
                     "train/nerf_sample_fraction",
                     float(1.0 if real_data is None else 0.0 if nerf_data is None else 0.5),
