@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 STEP_RE = re.compile(r"^(?P<stage>[a-zA-Z0-9_]+)_step(?P<step>\d+)\.json$")
 
 
-def _load_from_stats_dir(run_dir: Path, stage: str) -> List[Tuple[int, Dict]]:
+def _load_from_stats_dir(run_dir: Path, stage: str, max_step: int = -1) -> List[Tuple[int, Dict]]:
     stats_dir = run_dir / "stats"
     if not stats_dir.is_dir():
         return []
@@ -26,6 +26,8 @@ def _load_from_stats_dir(run_dir: Path, stage: str) -> List[Tuple[int, Dict]]:
         if m.group("stage") != stage:
             continue
         step = int(m.group("step"))
+        if max_step >= 0 and step > max_step:
+            continue
         with p.open("r", encoding="utf-8") as f:
             payload = json.load(f)
         rows.append((step, payload))
@@ -33,7 +35,7 @@ def _load_from_stats_dir(run_dir: Path, stage: str) -> List[Tuple[int, Dict]]:
     return rows
 
 
-def _load_from_aggregate(run_dir: Path, step_interval: int) -> List[Tuple[int, Dict]]:
+def _load_from_aggregate(run_dir: Path, step_interval: int, max_step: int = -1) -> List[Tuple[int, Dict]]:
     agg = run_dir / "gsplat_stats.json"
     if not agg.is_file():
         return []
@@ -47,6 +49,8 @@ def _load_from_aggregate(run_dir: Path, step_interval: int) -> List[Tuple[int, D
         if not isinstance(item, dict):
             continue
         step = i * step_interval
+        if max_step >= 0 and step > max_step:
+            continue
         rows.append((step, item))
     return rows
 
@@ -64,16 +68,16 @@ def _collect_metric_series(rows: List[Tuple[int, Dict]]) -> Dict[str, Tuple[List
 
 
 def _load_run(
-    run_dir: Path, source: str, stage: str, step_interval: int
+    run_dir: Path, source: str, stage: str, step_interval: int, max_step: int = -1
 ) -> Tuple[List[Tuple[int, Dict]], str]:
     rows: List[Tuple[int, Dict]] = []
     used_source = source
     if source in ("auto", "stats_dir"):
-        rows = _load_from_stats_dir(run_dir, stage=stage)
+        rows = _load_from_stats_dir(run_dir, stage=stage, max_step=max_step)
         if rows:
             used_source = "stats_dir"
     if not rows and source in ("auto", "aggregate"):
-        rows = _load_from_aggregate(run_dir, step_interval=step_interval)
+        rows = _load_from_aggregate(run_dir, step_interval=step_interval, max_step=max_step)
         if rows:
             used_source = "aggregate"
     return rows, used_source
@@ -239,6 +243,12 @@ def main() -> None:
         help="Step interval to infer steps for gsplat_stats.json entries.",
     )
     parser.add_argument(
+        "--max-step",
+        type=int,
+        default=-1,
+        help="Optional max step to include in plots. Use -1 for no limit (default).",
+    )
+    parser.add_argument(
         "--plot-style",
         choices=["points", "lines"],
         default="points",
@@ -265,7 +275,11 @@ def main() -> None:
         run_dir = run_dirs[0]
         out_dir = args.out_dir.resolve() if args.out_dir is not None else (run_dir / "plots")
         rows, used_source = _load_run(
-            run_dir, source=args.source, stage=args.stage, step_interval=args.step_interval
+            run_dir,
+            source=args.source,
+            stage=args.stage,
+            step_interval=args.step_interval,
+            max_step=args.max_step,
         )
         if not rows:
             stats_glob = run_dir / "stats"
@@ -286,7 +300,11 @@ def main() -> None:
     all_series: Dict[str, Dict[str, Tuple[List[int], List[float]]]] = {}
     for run_dir, label in zip(run_dirs, labels):
         rows, used_source = _load_run(
-            run_dir, source=args.source, stage=args.stage, step_interval=args.step_interval
+            run_dir,
+            source=args.source,
+            stage=args.stage,
+            step_interval=args.step_interval,
+            max_step=args.max_step,
         )
         if not rows:
             print(f"[WARN] skipping {label}: no stats found in {run_dir}")

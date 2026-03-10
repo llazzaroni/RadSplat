@@ -194,17 +194,13 @@ python run_gsplat.py default \
   --result-dir /cluster/scratch/rbollati/models/RadSplat_baseline \
   --data-factor 1
 
+
+
 python utils/plot_gsplat_eval_stats.py \
-  --run-dir /cluster/scratch/rbollati/models/Gsplat_sfm_baseline_full_nores \
-  --run-dir /cluster/scratch/rbollati/models/RadSplat_dual_full_nores \
   --run-dir /cluster/scratch/rbollati/models/Gsplat_sfm_baseline_full_nores_l1 \
   --run-dir /cluster/scratch/rbollati/models/RadSplat_dual_full_nores_l1 \
-  --run-dir /cluster/scratch/rbollati/models/RadSplat_dual_full_nores_l1_2 \
-  --label gsplat-sfm \
-  --label radsplat-dual-sfm \
   --label gsplat-sfm-l1 \
   --label radsplat-sfm-l1 \
-  --label radsplat-sfm-l1-2 \
   --out-dir /cluster/scratch/rbollati/plots \
   --plot-style lines
 
@@ -324,18 +320,26 @@ for k, v in row.items():
 PY
 
 
+python utils/plot_gsplat_eval_stats.py \
+  --run-dir /cluster/scratch/rbollati/models/Gsplat_sfm_baseline_full_nores_l1 \
+  --run-dir /cluster/scratch/rbollati/models/RadSplat_dual_full_nores_l1 \
+  --label gsplat \
+  --label radsplat-dual \
+  --out-dir /cluster/scratch/rbollati/plots \
+  --plot-style lines \
+  --max-step 270
 
 BETTER THAN SFM!!
 python run_gsplat_dual.py default \
   --no-nerf-init \
   --pt-path /cluster/scratch/rbollati/models/nerf_ensemble_11/outputs/ensemble_1/nerfacto/flowers_try/ray_sample.pt \
   --data-dir /cluster/scratch/rbollati/dataset/flowers_subset_aug3 \
-  --result-dir /cluster/scratch/rbollati/models/RadSplat_dual_full_nores_l1 \
+  --result-dir /cluster/scratch/rbollati/models/RadSplat_dual_full_nores_l1_1 \
   --data-factor 1 \
   --nerf-samples-data-factor 8 \
   --batch-size 1 \
   --nerf-batch-factor 20 \
-  --dual-nerf-decay-steps-to-quarter 300 \
+  --dual-nerf-decay-steps-to-quarter 200 \
   --dual-nerf-disable-threshold 0.1 \
   --max-steps 30000 \
   --strategy.reset-every 100000000 \
@@ -345,3 +349,10 @@ python run_gsplat_dual.py default \
 
 
 
+python run_gsplat.py default \
+  --data-dir /cluster/scratch/rbollati/dataset/flowers_subset2 \
+  --result-dir /cluster/scratch/rbollati/models/Gsplat_sfm_baseline_full \
+  --data-factor 1 \
+  --nerf-samples-data-factor 8 \
+  --ckpt /cluster/scratch/rbollati/models/Gsplat_sfm_baseline_full/ckpts/ckpt_29999_rank0.pt \
+  --render-traj-path interp
