@@ -3,6 +3,7 @@
 
 import argparse
 import json
+import math
 import re
 from pathlib import Path
 from typing import Dict, List, Tuple
@@ -64,6 +65,19 @@ def _collect_metric_series(rows: List[Tuple[int, Dict]]) -> Dict[str, Tuple[List
             xs, ys = series.setdefault(k, ([], []))
             xs.append(step)
             ys.append(float(v))
+
+        psnr = payload.get("psnr")
+        ssim = payload.get("ssim")
+        lpips = payload.get("lpips")
+        if isinstance(psnr, (int, float)) and isinstance(ssim, (int, float)) and isinstance(lpips, (int, float)):
+            combo_val = (
+                (10.0 ** (-float(psnr) / 10.0))
+                * math.sqrt(max(0.0, 1.0 - float(ssim)))
+                * float(lpips)
+            ) ** (1.0 / 3.0)
+            xs, ys = series.setdefault("psnr_ssim_lpips_combo", ([], []))
+            xs.append(step)
+            ys.append(combo_val)
     return series
 
 
@@ -99,6 +113,7 @@ def plot_metrics(
         "psnr",
         "ssim",
         "lpips",
+        "psnr_ssim_lpips_combo",
         "cc_psnr",
         "cc_ssim",
         "cc_lpips",
@@ -155,6 +170,7 @@ def plot_comparison(
         "psnr",
         "ssim",
         "lpips",
+        "psnr_ssim_lpips_combo",
         "cc_psnr",
         "cc_ssim",
         "cc_lpips",
