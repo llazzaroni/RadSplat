@@ -1,6 +1,7 @@
 import json
 import math
 import os
+import random
 import time
 from collections import defaultdict
 from pathlib import Path
@@ -40,19 +41,32 @@ from nerfview import CameraState, RenderTabState, apply_float_colormap
 from gsplat_dir.cfg import Config
 from gsplat_dir.create_splats import create_splats_with_optimizers
 
+
+def _seed_worker(worker_id: int) -> None:
+    """Seed numpy/python RNGs in each dataloader worker from torch worker seed."""
+    worker_seed = torch.initial_seed() % (2**32)
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
+
+
 class Runner:
     """Engine for training and testing."""
 
     def __init__(
         self, local_rank: int, world_rank, world_size: int, cfg: Config
     ) -> None:
-        set_random_seed(42 + local_rank)
+        set_random_seed(cfg.seed + local_rank)
+        if cfg.deterministic:
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            torch.use_deterministic_algorithms(True, warn_only=True)
 
         self.cfg = cfg
         self.world_rank = world_rank
         self.local_rank = local_rank
         self.world_size = world_size
         self.device = f"cuda:{local_rank}"
+        self._loader_seed_base = int(cfg.seed) + 1000 + int(local_rank) * 100000
 
         # Where to dump results.
         os.makedirs(cfg.result_dir, exist_ok=True)
@@ -362,6 +376,8 @@ class Runner:
             num_workers=4,
             persistent_workers=True,
             pin_memory=True,
+            worker_init_fn=_seed_worker,
+            generator=torch.Generator().manual_seed(self._loader_seed_base),
         )
         trainloader_iter = iter(trainloader)
 

@@ -7,6 +7,10 @@ from submodules.gsplat.gsplat.strategy import DefaultStrategy, MCMCStrategy
 @dataclass
 class Config:
     pt_path: str = ""
+    # Base random seed. Effective seed is seed + local_rank.
+    seed: int = 42
+    # If True, enable deterministic torch/cudnn behavior (slower, but more reproducible).
+    deterministic: bool = False
     # Disable viewer
     disable_viewer: bool = False
     # Path to the .pt files. If provide, it will skip training and run evaluation only.

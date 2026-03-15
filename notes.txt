@@ -126,6 +126,87 @@ ns-train nerfacto \
   --colmap-path /cluster/scratch/rbollati/dataset/flowers_sparse/sparse/0 \
   --images-path /cluster/scratch/rbollati/dataset/flowers_sparse/images
 
+3) Run nerf_step to obtain the positions and colors tensor
+
+python ~/RadSplat/RadSplat/nerf_step.py \
+    --nerf-folder /cluster/scratch/rbollati/models_sparse/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/config.yml \
+    --output-name /cluster/scratch/rbollati/models_sparse/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/ray_sample.pt \
+    --sampling-size 1000000 \
+    --ray-sampling-strategy random
+
+4) In order to be able to run gsplat, run:
+
+module purge
+module load stack/2024-06 gcc/12.2.0
+module load cuda/12.1.1
+module load eth_proxy
+
+conda activate gsplat
+unset PYTHONPATH
+export PYTHONNOUSERSITE=1
+export CC=gcc
+export CXX=g++
+export CUDAHOSTCXX=g++
+export CUDA_HOME=$(dirname $(dirname $(which nvcc)))
+export PATH=$CUDA_HOME/bin:$PATH
+export LD_LIBRARY_PATH=$CUDA_HOME/lib64:${LD_LIBRARY_PATH:-}
+
+5) Run vanilla gsplat for the baseline
+
+python run_gsplat.py default \
+  --no-nerf-init \
+  --init-type sfm \
+  --pt-path /cluster/scratch/rbollati/models_sparse/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/ray_sample.pt \
+  --data-dir /cluster/scratch/rbollati/dataset/flowers_sparse \
+  --result-dir /cluster/scratch/rbollati/models_sparse/gsplat_sfm_l1_nores \
+  --max-steps 30000 \
+  --data-factor 1 \
+  --strategy.reset-every 100000000 \
+  --use-l1-for-real-samples
+
+6) Run RadSplat:
+
+python run_gsplat.py default \
+  --nerf-init \
+  --pt-path /cluster/scratch/rbollati/models_sparse/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/ray_sample.pt \
+  --data-dir /cluster/scratch/rbollati/dataset/flowers_sparse \
+  --result-dir /cluster/scratch/rbollati/models_sparse/radsplat_l1_nores \
+  --max-steps 30000 \
+  --strategy.reset-every 100000000 \
+  --use-l1-for-real-samples \
+  --data-factor 1
+
+7) Generate the augmented dataset:
+
+python images.py \
+  --nerf-folders /cluster/scratch/rbollati/models_sparse/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/models_sparse/nerf_ensemble_2/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/models_sparse/nerf_ensemble_3/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/models_sparse/nerf_ensemble_4/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/models_sparse/nerf_ensemble_5/outputs/ensemble_1/nerfacto/flowers/config.yml \
+  --exp-dirs /cluster/scratch/rbollati/models_sparse/nerf_ensemble_1 /cluster/scratch/rbollati/models_sparse/nerf_ensemble_2 /cluster/scratch/rbollati/models_sparse/nerf_ensemble_3 /cluster/scratch/rbollati/models_sparse/nerf_ensemble_4 /cluster/scratch/rbollati/models_sparse/nerf_ensemble_5 \
+  --input-dataset /cluster/scratch/rbollati/dataset/flowers_sparse \
+  --output-dataset /cluster/scratch/rbollati/dataset/flowers_sparse_aug \
+  --tmp-root /cluster/home/rbollati/tmp \
+  --tau 1.5 \
+  --debug-plot-dir image_supervision \
+  --num-final-samples 200 \
+  --final-render-scale 0.125
+
+8) Run RadSplat dual:
+
+python run_gsplat_dual.py default \
+  --no-nerf-init \
+  --pt-path /cluster/scratch/rbollati/models_sparse/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/ray_sample.pt \
+  --data-dir /cluster/scratch/rbollati/dataset/flowers_sparse_aug \
+  --result-dir /cluster/scratch/rbollati/models_sparse/radsplat_dual_sfm_l1 \
+  --data-factor 1 \
+  --nerf-samples-data-factor 8 \
+  --batch-size 1 \
+  --nerf-batch-factor 20 \
+  --dual-nerf-decay-steps-to-quarter 300 \
+  --dual-nerf-disable-threshold 0.1 \
+  --max-steps 30000 \
+  --strategy.reset-every 100000000 \
+  --use-l1-for-real-samples \
+  --dual-nerf-loss-weight 1.0
+
 1) step: run nerf; creates the nerf folder in the directory the job is started from
 
 ns-train nerfacto \
@@ -314,10 +395,10 @@ python run_gsplat.py default \
 
 
 python images.py \
-  --nerf-folders /cluster/scratch/rbollati/models/nerf_ensemble_11/outputs/ensemble_1/nerfacto/flowers_try/config.yml /cluster/scratch/rbollati/models/nerf_ensemble_12/outputs/ensemble_1/nerfacto/flowers_try/config.yml /cluster/scratch/rbollati/models/nerf_ensemble_13/outputs/ensemble_1/nerfacto/flowers_try/config.yml /cluster/scratch/rbollati/models/nerf_ensemble_14/outputs/ensemble_1/nerfacto/flowers_try/config.yml /cluster/scratch/rbollati/models/nerf_ensemble_15/outputs/ensemble_1/nerfacto/flowers_try/config.yml \
-  --exp-dirs /cluster/scratch/rbollati/models/nerf_ensemble_11 /cluster/scratch/rbollati/models/nerf_ensemble_12 /cluster/scratch/rbollati/models/nerf_ensemble_13 /cluster/scratch/rbollati/models/nerf_ensemble_14 /cluster/scratch/rbollati/models/nerf_ensemble_15 \
-  --input-dataset /cluster/scratch/rbollati/dataset/flowers_subset2 \
-  --output-dataset /cluster/scratch/rbollati/dataset/flowers_subset_aug3 \
+  --nerf-folders /cluster/scratch/rbollati/models_sparse/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/models_sparse/nerf_ensemble_2/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/models_sparse/nerf_ensemble_3/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/models_sparse/nerf_ensemble_4/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/models_sparse/nerf_ensemble_5/outputs/ensemble_1/nerfacto/flowers/config.yml \
+  --exp-dirs /cluster/scratch/rbollati/models_sparse/nerf_ensemble_1 /cluster/scratch/rbollati/models_sparse/nerf_ensemble_2 /cluster/scratch/rbollati/models_sparse/nerf_ensemble_3 /cluster/scratch/rbollati/models_sparse/nerf_ensemble_4 /cluster/scratch/rbollati/models_sparse/nerf_ensemble_5 \
+  --input-dataset /cluster/scratch/rbollati/dataset/flowers_sparse \
+  --output-dataset /cluster/scratch/rbollati/dataset/flowers_sparse_aug \
   --tmp-root /cluster/home/rbollati/tmp \
   --tau 1.5 \
   --debug-plot-dir image_supervision \
@@ -438,7 +519,7 @@ python run_gsplat.py default \
   --max-steps 30000 \
   --data-factor 1 \
   --strategy.reset-every 100000000 \
-  --use-l1-for-real-samples True
+  --use-l1-for-real-samples
 
 python - <<'PY' /cluster/scratch/rbollati/models/RadSplat_dual_full_nores 15000
 import json, sys, pathlib
@@ -465,13 +546,16 @@ PY
 
 
 python utils/plot_gsplat_eval_stats.py \
-  --run-dir /cluster/scratch/rbollati/models/Gsplat_sfm_baseline_full_nores_l1 \
-  --run-dir /cluster/scratch/rbollati/models/RadSplat_dual_full_nores_l1 \
+  --run-dir /cluster/scratch/rbollati/models_sparse/gsplat_sfm_l1_nores \
+  --run-dir /cluster/scratch/rbollati/models_sparse/radsplat_l1_nores \
+  --run-dir /cluster/scratch/rbollati/models_sparse/RadSplat_dual_full_nores_l1_1 \
+  --run-dir /cluster/scratch/rbollati/models_sparse/RadSplat_dual_full_nores_l1_2 \
   --label gsplat \
+  --label radsplat \
   --label radsplat-dual \
+  --label radsplat-dual-2 \
   --out-dir /cluster/scratch/rbollati/plots \
-  --plot-style lines \
-  --max-step 27000
+  --plot-style lines
 
 BETTER THAN SFM!!
 python run_gsplat_dual.py default \
@@ -491,6 +575,23 @@ python run_gsplat_dual.py default \
   --dual-nerf-loss-weight 1.0
 
 
+python run_gsplat_dual.py default \
+  --no-nerf-init \
+  --pt-path /cluster/scratch/rbollati/models_sparse/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/ray_sample.pt \
+  --data-dir /cluster/scratch/rbollati/dataset/flowers_sparse_aug \
+  --result-dir /cluster/scratch/rbollati/models_sparse/RadSplat_dual_full_nores_l1_2 \
+  --data-factor 1 \
+  --nerf-samples-data-factor 8 \
+  --batch-size 1 \
+  --nerf-batch-factor 20 \
+  --dual-nerf-decay-steps-to-quarter 300 \
+  --dual-nerf-disable-threshold 0.1 \
+  --max-steps 30000 \
+  --strategy.reset-every 100000000 \
+  --use-l1-for-real-samples \
+  --dual-nerf-loss-weight 0.85
+
+
 
 
 python run_gsplat.py default \
@@ -500,3 +601,20 @@ python run_gsplat.py default \
   --nerf-samples-data-factor 8 \
   --ckpt /cluster/scratch/rbollati/models/Gsplat_sfm_baseline_full/ckpts/ckpt_29999_rank0.pt \
   --render-traj-path interp
+
+
+python run_gsplat_dual.py default \
+  --no-nerf-init \
+  --pt-path /cluster/scratch/rbollati/models_sparse/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/config.yml \
+  --data-dir /cluster/scratch/rbollati/dataset/flowers_sparse_aug \
+  --result-dir /cluster/scratch/rbollati/models/ \
+  --data-factor 1 \
+  --nerf-samples-data-factor 8 \
+  --batch-size 1 \
+  --nerf-batch-factor 20 \
+  --dual-nerf-decay-steps-to-quarter 200 \
+  --dual-nerf-disable-threshold 0.1 \
+  --max-steps 30000 \
+  --strategy.reset-every 100000000 \
+  --use-l1-for-real-samples \
+  --dual-nerf-loss-weight 1.0

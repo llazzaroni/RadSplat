@@ -10,7 +10,7 @@ from fused_ssim import fused_ssim
 from torch.utils.data import DataLoader, Subset
 from typing_extensions import assert_never
 
-from gsplat_dir.runner import Runner
+from gsplat_dir.runner import Runner, _seed_worker
 from submodules.gsplat.gsplat.strategy import DefaultStrategy, MCMCStrategy
 
 try:
@@ -113,6 +113,7 @@ class RunnerDual(Runner):
         real_loader = None
         nerf_loader = None
         if len(real_items) > 0:
+            real_gen = torch.Generator().manual_seed(self._loader_seed_base + 1)
             real_loader = DataLoader(
                 Subset(self.trainset, real_items),
                 batch_size=cfg.batch_size,
@@ -120,8 +121,11 @@ class RunnerDual(Runner):
                 num_workers=4,
                 persistent_workers=True,
                 pin_memory=True,
+                worker_init_fn=_seed_worker,
+                generator=real_gen,
             )
         if len(nerf_items) > 0:
+            nerf_gen = torch.Generator().manual_seed(self._loader_seed_base + 2)
             nerf_loader = DataLoader(
                 Subset(self.trainset, nerf_items),
                 batch_size=max(1, cfg.batch_size * cfg.nerf_batch_factor),
@@ -129,6 +133,8 @@ class RunnerDual(Runner):
                 num_workers=4,
                 persistent_workers=True,
                 pin_memory=True,
+                worker_init_fn=_seed_worker,
+                generator=nerf_gen,
             )
 
         real_iter = None
