@@ -26,6 +26,13 @@ def main(local_rank: int, world_rank, world_size: int, cfg: Config):
         raise ValueError(f"Refusing to write to result_dir={cfg.result_dir!r}. "
                         "Pass a user-writable directory with --result_dir.")
     os.makedirs(cfg.result_dir, exist_ok=True)
+    if cfg.deterministic:
+        os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
+        if world_rank == 0:
+            print(
+                f"[Determinism] enabled (seed={cfg.seed}); "
+                "set CUBLAS_WORKSPACE_CONFIG=:4096:8"
+            )
 
     runner = Runner(local_rank, world_rank, world_size, cfg)
 

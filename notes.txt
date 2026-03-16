@@ -1,6 +1,6 @@
 1) step: build a subset of the dataset:
-FULL=/cluster/scratch/rbollati/dataset/flowers
-SUB=/cluster/scratch/rbollati/dataset/flowers_sparse
+FULL=/cluster/scratch/rbollati/dataset/counter
+SUB=/cluster/scratch/rbollati/dataset/counter_sparse
 N=30
 SEED=42
 
@@ -123,14 +123,14 @@ ns-train nerfacto \
   --logging.profiler pytorch \
   colmap \
   --downscale-factor 1 \
-  --colmap-path /cluster/scratch/rbollati/dataset/flowers_sparse/sparse/0 \
-  --images-path /cluster/scratch/rbollati/dataset/flowers_sparse/images
+  --colmap-path /cluster/scratch/rbollati/dataset/counter_sparse/sparse/0 \
+  --images-path /cluster/scratch/rbollati/dataset/counter_sparse/images
 
 3) Run nerf_step to obtain the positions and colors tensor
 
 python ~/RadSplat/RadSplat/nerf_step.py \
-    --nerf-folder /cluster/scratch/rbollati/models_sparse/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/config.yml \
-    --output-name /cluster/scratch/rbollati/models_sparse/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/ray_sample.pt \
+    --nerf-folder /cluster/scratch/rbollati/counter_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/config.yml \
+    --output-name /cluster/scratch/rbollati/counter_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/ray_sample.pt \
     --sampling-size 1000000 \
     --ray-sampling-strategy random
 
@@ -168,8 +168,8 @@ python run_gsplat.py default \
 
 python run_gsplat.py default \
   --nerf-init \
-  --pt-path /cluster/scratch/rbollati/models_sparse/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/ray_sample.pt \
-  --data-dir /cluster/scratch/rbollati/dataset/flowers_sparse \
+  --pt-path /cluster/scratch/rbollati/counter_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/ray_sample.pt \
+  --data-dir /cluster/scratch/rbollati/dataset/counter_sparse \
   --result-dir /cluster/scratch/rbollati/models_sparse/radsplat_l1_nores \
   --max-steps 30000 \
   --strategy.reset-every 100000000 \
@@ -179,10 +179,10 @@ python run_gsplat.py default \
 7) Generate the augmented dataset:
 
 python images.py \
-  --nerf-folders /cluster/scratch/rbollati/models_sparse/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/models_sparse/nerf_ensemble_2/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/models_sparse/nerf_ensemble_3/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/models_sparse/nerf_ensemble_4/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/models_sparse/nerf_ensemble_5/outputs/ensemble_1/nerfacto/flowers/config.yml \
-  --exp-dirs /cluster/scratch/rbollati/models_sparse/nerf_ensemble_1 /cluster/scratch/rbollati/models_sparse/nerf_ensemble_2 /cluster/scratch/rbollati/models_sparse/nerf_ensemble_3 /cluster/scratch/rbollati/models_sparse/nerf_ensemble_4 /cluster/scratch/rbollati/models_sparse/nerf_ensemble_5 \
-  --input-dataset /cluster/scratch/rbollati/dataset/flowers_sparse \
-  --output-dataset /cluster/scratch/rbollati/dataset/flowers_sparse_aug \
+  --nerf-folders /cluster/scratch/rbollati/counter_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/counter_models/nerf_ensemble_2/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/counter_models/nerf_ensemble_3/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/counter_models/nerf_ensemble_4/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/counter_models/nerf_ensemble_5/outputs/ensemble_1/nerfacto/flowers/config.yml \
+  --exp-dirs /cluster/scratch/rbollati/counter_models/nerf_ensemble_1 /cluster/scratch/rbollati/counter_models/nerf_ensemble_2 /cluster/scratch/rbollati/counter_models/nerf_ensemble_3 /cluster/scratch/rbollati/counter_models/nerf_ensemble_4 /cluster/scratch/rbollati/counter_models/nerf_ensemble_5 \
+  --input-dataset /cluster/scratch/rbollati/dataset/counter_sparse \
+  --output-dataset /cluster/scratch/rbollati/dataset/counter_sparse_aug \
   --tmp-root /cluster/home/rbollati/tmp \
   --tau 1.5 \
   --debug-plot-dir image_supervision \
@@ -205,7 +205,8 @@ python run_gsplat_dual.py default \
   --max-steps 30000 \
   --strategy.reset-every 100000000 \
   --use-l1-for-real-samples \
-  --dual-nerf-loss-weight 1.0
+  --dual-nerf-loss-weight 0.5 \
+  --deterministic
 
 1) step: run nerf; creates the nerf folder in the directory the job is started from
 
@@ -546,10 +547,14 @@ PY
 
 
 python utils/plot_gsplat_eval_stats.py \
-  --run-dir /cluster/scratch/rbollati/models_sparse/gsplat_sfm_l1_nores \
-  --run-dir /cluster/scratch/rbollati/models_sparse/RadSplat_dual_full_nores_l1_2 \
+  --run-dir /cluster/scratch/rbollati/counter_models/gsplat_sfm_l1_nores \
+  --run-dir /cluster/scratch/rbollati/counter_models/RadSplat_dual_full_nores_l1_1 \
+  --run-dir /cluster/scratch/rbollati/counter_models/RadSplat_dual_full_nores_l1_2 \
+  --run-dir /cluster/scratch/rbollati/counter_models/RadSplat_dual_full_nores_l1_3 \
   --label gsplat \
+  --label radsplat-dual \
   --label radsplat-dual-2 \
+  --label radsplat-dual-3 \
   --out-dir /cluster/scratch/rbollati/plots \
   --plot-style lines
 
@@ -573,19 +578,19 @@ python run_gsplat_dual.py default \
 
 python run_gsplat_dual.py default \
   --no-nerf-init \
-  --pt-path /cluster/scratch/rbollati/models_sparse/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/ray_sample.pt \
-  --data-dir /cluster/scratch/rbollati/dataset/flowers_sparse_aug \
-  --result-dir /cluster/scratch/rbollati/models_sparse/RadSplat_dual_full_nores_l1_1 \
+  --pt-path /cluster/scratch/rbollati/counter_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/ray_sample.pt \
+  --data-dir /cluster/scratch/rbollati/dataset/counter_sparse_aug \
+  --result-dir /cluster/scratch/rbollati/counter_models/RadSplat_dual_full_nores_l1_3 \
   --data-factor 1 \
   --nerf-samples-data-factor 8 \
   --batch-size 1 \
   --nerf-batch-factor 20 \
-  --dual-nerf-decay-steps-to-quarter 300 \
-  --dual-nerf-disable-threshold 0.1 \
+  --dual-nerf-decay-steps-to-quarter 1000 \
+  --dual-nerf-disable-threshold 0.05 \
   --max-steps 30000 \
   --strategy.reset-every 100000000 \
   --use-l1-for-real-samples \
-  --dual-nerf-loss-weight 0.75 \
+  --dual-nerf-loss-weight 0.5 \
   --deterministic
 
 

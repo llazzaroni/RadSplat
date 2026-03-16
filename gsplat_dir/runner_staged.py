@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader, Subset
 from typing_extensions import assert_never
 
 from gsplat_dir.colmap import Dataset as ColmapDataset
-from gsplat_dir.runner import Runner
+from gsplat_dir.runner import Runner, _seed_worker
 from submodules.gsplat.gsplat.strategy import DefaultStrategy, MCMCStrategy
 
 try:
@@ -143,6 +143,8 @@ class RunnerStaged(Runner):
         nerf_loader = None
         pretrain_loader = None
         if len(real_items) > 0:
+            # Post-pretraining real phase follows the same deterministic order as standard Runner.
+            real_gen = torch.Generator().manual_seed(self._loader_seed_base)
             real_loader = DataLoader(
                 Subset(self.trainset, real_items),
                 batch_size=cfg.batch_size,
@@ -150,8 +152,11 @@ class RunnerStaged(Runner):
                 num_workers=4,
                 persistent_workers=True,
                 pin_memory=True,
+                worker_init_fn=_seed_worker,
+                generator=real_gen,
             )
         if len(nerf_items) > 0:
+            nerf_gen = torch.Generator().manual_seed(self._loader_seed_base + 1)
             nerf_loader = DataLoader(
                 Subset(self.trainset, nerf_items),
                 batch_size=max(1, cfg.batch_size * cfg.nerf_batch_factor),
@@ -159,6 +164,8 @@ class RunnerStaged(Runner):
                 num_workers=4,
                 persistent_workers=True,
                 pin_memory=True,
+                worker_init_fn=_seed_worker,
+                generator=nerf_gen,
             )
         if bool(getattr(cfg, "staged_include_real_in_nerf_phase", False)):
             pretrain_dataset = ColmapDataset(
@@ -168,6 +175,7 @@ class RunnerStaged(Runner):
                 load_depths=False,
                 use_nerf_factor_for_real=True,
             )
+            pretrain_gen = torch.Generator().manual_seed(self._loader_seed_base + 2)
             pretrain_loader = DataLoader(
                 pretrain_dataset,
                 batch_size=max(1, cfg.batch_size * cfg.nerf_batch_factor),
@@ -175,6 +183,8 @@ class RunnerStaged(Runner):
                 num_workers=4,
                 persistent_workers=True,
                 pin_memory=True,
+                worker_init_fn=_seed_worker,
+                generator=pretrain_gen,
             )
 
         real_iter = None
