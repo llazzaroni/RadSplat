@@ -547,12 +547,8 @@ PY
 
 python utils/plot_gsplat_eval_stats.py \
   --run-dir /cluster/scratch/rbollati/models_sparse/gsplat_sfm_l1_nores \
-  --run-dir /cluster/scratch/rbollati/models_sparse/radsplat_l1_nores \
-  --run-dir /cluster/scratch/rbollati/models_sparse/RadSplat_dual_full_nores_l1_1 \
   --run-dir /cluster/scratch/rbollati/models_sparse/RadSplat_dual_full_nores_l1_2 \
   --label gsplat \
-  --label radsplat \
-  --label radsplat-dual \
   --label radsplat-dual-2 \
   --out-dir /cluster/scratch/rbollati/plots \
   --plot-style lines
@@ -579,7 +575,7 @@ python run_gsplat_dual.py default \
   --no-nerf-init \
   --pt-path /cluster/scratch/rbollati/models_sparse/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/ray_sample.pt \
   --data-dir /cluster/scratch/rbollati/dataset/flowers_sparse_aug \
-  --result-dir /cluster/scratch/rbollati/models_sparse/RadSplat_dual_full_nores_l1_2 \
+  --result-dir /cluster/scratch/rbollati/models_sparse/RadSplat_dual_full_nores_l1_1 \
   --data-factor 1 \
   --nerf-samples-data-factor 8 \
   --batch-size 1 \
@@ -589,7 +585,8 @@ python run_gsplat_dual.py default \
   --max-steps 30000 \
   --strategy.reset-every 100000000 \
   --use-l1-for-real-samples \
-  --dual-nerf-loss-weight 0.85
+  --dual-nerf-loss-weight 0.75 \
+  --deterministic
 
 
 

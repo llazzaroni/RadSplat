@@ -913,6 +913,7 @@ class Runner:
         )
         print("Eval done!")
         self.stats_arr.append(stats)
+        return stats
 
     def save_ckpt(self):
         print("got to the save_ckpt function!")
