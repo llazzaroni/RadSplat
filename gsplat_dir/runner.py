@@ -384,6 +384,8 @@ class Runner:
         # Training loop.
         global_tic = time.time()
         pbar = tqdm.tqdm(range(init_step, max_steps))
+        best_val_combo = float("inf")
+        best_val_step = -1
         for step in pbar:
             if not cfg.disable_viewer:
                 while self.viewer.state == "paused":
@@ -608,8 +610,8 @@ class Runner:
                     self.writer.add_image("train/render", canvas, step)
                 self.writer.flush()
 
-            # save checkpoint before updating the model
-            if step in [i - 1 for i in cfg.save_steps] or step == max_steps - 1:
+            # Save periodic checkpoints before updating the model.
+            if step in [i - 1 for i in cfg.save_steps]:
                 mem = torch.cuda.max_memory_allocated() / 1024**3
                 stats = {
                     "mem": mem,
@@ -744,8 +746,45 @@ class Runner:
 
             # Call the SLIGHTLY modified eval function
             if step % 100 == 0:
-                self.eval_allstats()
+                eval_stats = self.eval_allstats()
                 if world_rank == 0:
+                    # Combined lower-is-better validation score:
+                    # (10^(-PSNR/10) * sqrt(1-SSIM) * LPIPS)^(1/3)
+                    if all(k in eval_stats for k in ("psnr", "ssim", "lpips")):
+                        val_combo = (
+                            (10.0 ** (-float(eval_stats["psnr"]) / 10.0))
+                            * math.sqrt(max(0.0, 1.0 - float(eval_stats["ssim"])))
+                            * float(eval_stats["lpips"])
+                        ) ** (1.0 / 3.0)
+                        self.writer.add_scalar("val/combined_score", val_combo, step)
+                        self.writer.flush()
+                        if val_combo < best_val_combo:
+                            best_val_combo = val_combo
+                            best_val_step = step
+                            best_ckpt = {
+                                "step": step,
+                                "best_val_combo": best_val_combo,
+                                "best_val_step": best_val_step,
+                                "splats": self.splats.state_dict(),
+                            }
+                            if cfg.pose_opt:
+                                best_ckpt["pose_adjust"] = (
+                                    self.pose_adjust.module.state_dict()
+                                    if world_size > 1
+                                    else self.pose_adjust.state_dict()
+                                )
+                            if cfg.app_opt:
+                                best_ckpt["app_module"] = (
+                                    self.app_module.module.state_dict()
+                                    if world_size > 1
+                                    else self.app_module.state_dict()
+                                )
+                            best_path = f"{self.ckpt_dir}/best_ckpt_rank{self.world_rank}.pt"
+                            torch.save(best_ckpt, best_path)
+                            print(
+                                f"[best-ckpt] saved {best_path} at step={step} "
+                                f"with combined_score={best_val_combo:.6f}"
+                            )
                     with open(os.path.join(cfg.result_dir, "gsplat_stats.json"), "w", encoding="utf-8") as f:
                         json.dump(self.stats_arr, f, indent=2, ensure_ascii=False)
                     training_time = time.time() - global_tic
