@@ -550,11 +550,11 @@ python utils/plot_gsplat_eval_stats.py \
   --run-dir /cluster/scratch/rbollati/counter_models/gsplat_sfm_l1_nores \
   --run-dir /cluster/scratch/rbollati/counter_models/RadSplat_dual_full_nores_l1_1 \
   --run-dir /cluster/scratch/rbollati/counter_models/RadSplat_dual_full_nores_l1_2 \
-  --run-dir /cluster/scratch/rbollati/counter_models/RadSplat_dual_full_nores_l1_3 \
+  --run-dir /cluster/scratch/rbollati/counter_models/RadSplat_staged_full_nores_l1_4 \
   --label gsplat \
   --label radsplat-dual \
   --label radsplat-dual-2 \
-  --label radsplat-dual-3 \
+  --label radsplat-staged \
   --out-dir /cluster/scratch/rbollati/plots \
   --plot-style lines
 
@@ -620,3 +620,20 @@ python run_gsplat_dual.py default \
   --strategy.reset-every 100000000 \
   --use-l1-for-real-samples \
   --dual-nerf-loss-weight 1.0
+
+
+python run_gsplat_staged.py default \
+  --no-nerf-init \
+  --pt-path /cluster/scratch/rbollati/counter_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/ray_sample.pt \
+  --data-dir /cluster/scratch/rbollati/dataset/counter_sparse_aug \
+  --result-dir /cluster/scratch/rbollati/counter_models/RadSplat_staged_full_nores_l1_4 \
+  --data-factor 1 \
+  --nerf-samples-data-factor 8 \
+  --batch-size 1 \
+  --nerf-batch-factor 20 \
+  --use-l1-for-real-samples \
+  --staged-nerf-phase-steps 100 \
+  --staged-real-phase-steps 30000 \
+  --strategy.reset-every 100000000 \
+  --staged-include-real-in-nerf-phase \
+  --deterministic
