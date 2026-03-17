@@ -99,6 +99,10 @@ class RunnerDual(Runner):
         nerf_weight_start = float(getattr(cfg, "dual_nerf_loss_weight", 2.0))
         nerf_branch_enabled = len(nerf_items) > 0
         nerf_branch_disabled_printed = False
+        use_nerf_depth = bool(getattr(cfg, "use_nerf_depth_supervision", False))
+        nerf_depth_lambda = float(getattr(cfg, "nerf_depth_lambda", 0.0))
+        nerf_depth_max_steps = int(getattr(cfg, "nerf_depth_max_steps", -1))
+        nerf_depth_log_space = bool(getattr(cfg, "nerf_depth_log_space", True))
         if world_rank == 0:
             print(
                 f"[DualLoader] real train images={len(real_items)}, nerf samples={len(nerf_items)}, "
@@ -109,6 +113,13 @@ class RunnerDual(Runner):
                 f"nerf_weight_schedule: w0={nerf_weight_start}, quarter_at={decay_steps}, "
                 f"disable_below={nerf_disable_threshold}"
             )
+            if use_nerf_depth:
+                print(
+                    f"[DualDepth] enabled: lambda={nerf_depth_lambda}, "
+                    f"log_space={nerf_depth_log_space}, max_steps={nerf_depth_max_steps}, "
+                    f"include_real={bool(getattr(cfg, 'nerf_depth_include_real', True))}, "
+                    f"include_nerf={bool(getattr(cfg, 'nerf_depth_include_nerf_samples', True))}"
+                )
 
         real_loader = None
         nerf_loader = None
@@ -141,6 +152,42 @@ class RunnerDual(Runner):
         nerf_iter = None
         real_use_l1 = bool(getattr(cfg, "use_l1_for_real_samples", False))
         nerf_use_l1 = bool(getattr(cfg, "use_l1_for_nerf_samples", False))
+
+        def _depth_supervision_active(cur_step: int) -> bool:
+            if not use_nerf_depth:
+                return False
+            if nerf_depth_lambda <= 0.0:
+                return False
+            if nerf_depth_max_steps < 0:
+                return True
+            return cur_step < nerf_depth_max_steps
+
+        def _compute_nerf_depth_loss(pred_depth_hw, data_batch):
+            if pred_depth_hw is None or data_batch is None:
+                return torch.tensor(0.0, device=device)
+            if "nerf_depth" not in data_batch or "has_nerf_depth" not in data_batch:
+                return torch.tensor(0.0, device=device)
+            tgt = data_batch["nerf_depth"].to(device).float()
+            has = data_batch["has_nerf_depth"].to(device).bool()
+            if pred_depth_hw.ndim == 4 and pred_depth_hw.shape[-1] == 1:
+                pred = pred_depth_hw[..., 0]
+            elif pred_depth_hw.ndim == 3:
+                pred = pred_depth_hw
+            else:
+                return torch.tensor(0.0, device=device)
+            if pred.shape != tgt.shape:
+                return torch.tensor(0.0, device=device)
+            eps = 1e-6
+            valid = has[:, None, None] & torch.isfinite(tgt) & torch.isfinite(pred) & (tgt > 0.0) & (pred > 0.0)
+            if not bool(valid.any().item()):
+                return torch.tensor(0.0, device=device)
+            if nerf_depth_log_space:
+                pred_v = torch.log(torch.clamp(pred[valid], min=eps))
+                tgt_v = torch.log(torch.clamp(tgt[valid], min=eps))
+            else:
+                pred_v = pred[valid]
+                tgt_v = tgt[valid]
+            return F.l1_loss(pred_v, tgt_v)
 
         global_tic = time.time()
         pbar = tqdm.tqdm(range(init_step, max_steps))
@@ -177,16 +224,19 @@ class RunnerDual(Runner):
             real_recon_loss = torch.tensor(0.0, device=device)
             ssimloss = torch.tensor(0.0, device=device)
             depthloss = None
+            depth_supervision_loss = torch.tensor(0.0, device=device)
             real_info = None
             real_Ks = None
             real_colors = None
             real_pixels = None
             pose_err = None
+            real_depth_pred = None
 
             nerf_loss = torch.tensor(0.0, device=device)
             nerf_reconloss = torch.tensor(0.0, device=device)
             nerf_info = None
             nerf_Ks = None
+            nerf_depth_pred = None
 
             if real_data is not None:
                 camtoworlds = camtoworlds_gt = real_data["camtoworld"].to(device)
@@ -209,6 +259,7 @@ class RunnerDual(Runner):
                 if cfg.pose_opt:
                     camtoworlds = self.pose_adjust(camtoworlds, image_ids)
 
+                render_mode_real = "RGB+ED" if (cfg.depth_loss or _depth_supervision_active(step)) else "RGB"
                 renders, alphas, info = self.rasterize_splats(
                     camtoworlds=camtoworlds,
                     Ks=Ks,
@@ -218,10 +269,11 @@ class RunnerDual(Runner):
                     near_plane=cfg.near_plane,
                     far_plane=cfg.far_plane,
                     image_ids=image_ids,
-                    render_mode="RGB+ED" if cfg.depth_loss else "RGB",
+                    render_mode=render_mode_real,
                     masks=masks,
                 )
                 colors, depths = (renders[..., 0:3], renders[..., 3:4]) if renders.shape[-1] == 4 else (renders, None)
+                real_depth_pred = depths
 
                 if cfg.use_bilateral_grid:
                     grid_y, grid_x = torch.meshgrid(
@@ -299,10 +351,14 @@ class RunnerDual(Runner):
                     near_plane=cfg.near_plane,
                     far_plane=cfg.far_plane,
                     image_ids=image_ids,
-                    render_mode="RGB",
+                    render_mode="RGB+ED" if _depth_supervision_active(step) else "RGB",
                     masks=masks,
                 )
-                colors = renders[..., 0:3] if renders.shape[-1] == 4 else renders
+                colors, nerf_depth_pred = (
+                    (renders[..., 0:3], renders[..., 3:4])
+                    if renders.shape[-1] == 4
+                    else (renders, None)
+                )
 
                 if cfg.use_bilateral_grid:
                     grid_y, grid_x = torch.meshgrid(
@@ -352,6 +408,15 @@ class RunnerDual(Runner):
             if wsum <= 0:
                 raise RuntimeError("dual_real_loss_weight + dual_nerf_loss_weight must be > 0.")
             loss = (wr * real_loss + wn * nerf_loss) / wsum
+            if _depth_supervision_active(step):
+                depth_terms = []
+                if bool(getattr(cfg, "nerf_depth_include_real", True)):
+                    depth_terms.append(_compute_nerf_depth_loss(real_depth_pred, real_data))
+                if bool(getattr(cfg, "nerf_depth_include_nerf_samples", True)):
+                    depth_terms.append(_compute_nerf_depth_loss(nerf_depth_pred, nerf_data))
+                if len(depth_terms) > 0:
+                    depth_supervision_loss = torch.stack(depth_terms).mean()
+                    loss = loss + nerf_depth_lambda * depth_supervision_loss
 
             if cfg.use_bilateral_grid:
                 tvloss = 10 * total_variation_loss(self.bil_grids.grids)
@@ -367,6 +432,8 @@ class RunnerDual(Runner):
             desc = f"loss={loss.item():.3f}| real={real_loss.item():.3f}| nerf={nerf_loss.item():.3f}| sh degree={sh_degree_to_use}| "
             if depthloss is not None:
                 desc += f"depth loss={depthloss.item():.6f}| "
+            if _depth_supervision_active(step):
+                desc += f"nerf-depth={depth_supervision_loss.item():.6f}| "
             if pose_err is not None:
                 desc += f"pose err={pose_err.item():.6f}| "
             pbar.set_description(desc)
@@ -399,6 +466,12 @@ class RunnerDual(Runner):
                     self.writer.add_scalar("train/depthloss", depthloss.item(), step)
                 if cfg.use_bilateral_grid:
                     self.writer.add_scalar("train/tvloss", tvloss.item(), step)
+                if _depth_supervision_active(step):
+                    self.writer.add_scalar(
+                        "train/nerf_depth_supervision_loss",
+                        depth_supervision_loss.item(),
+                        step,
+                    )
                 if cfg.tb_save_image and real_colors is not None and real_pixels is not None:
                     canvas = torch.cat([real_pixels, real_colors], dim=2).detach().cpu().numpy()
                     canvas = canvas.reshape(-1, *canvas.shape[2:])

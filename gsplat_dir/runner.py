@@ -100,6 +100,11 @@ class Runner:
             split="train",
             patch_size=cfg.patch_size,
             load_depths=cfg.depth_loss,
+            load_nerf_depths=cfg.use_nerf_depth_supervision,
+            nerf_depth_prefix=cfg.nerf_depth_prefix,
+            nerf_depth_factor=cfg.nerf_depth_data_factor,
+            nerf_depth_include_real=cfg.nerf_depth_include_real,
+            nerf_depth_include_nerf_samples=cfg.nerf_depth_include_nerf_samples,
         )
         self.valset = Dataset(self.parser, split="val")
         self._print_split_summary()
@@ -910,6 +915,7 @@ class Runner:
             self.valset, batch_size=1, shuffle=False, num_workers=1
         )
         metrics = defaultdict(list)
+        ellipse_time = 0.0
         
         for i, data in enumerate(valloader):
             camtoworlds = data["camtoworld"].to(device)
@@ -918,6 +924,9 @@ class Runner:
             masks = data["mask"].to(device) if "mask" in data else None
             height, width = pixels.shape[1:3]
 
+            if device.type == "cuda":
+                torch.cuda.synchronize()
+            tic = time.time()
             colors, _, _ = self.rasterize_splats(
                 camtoworlds=camtoworlds,
                 Ks=Ks,
@@ -928,6 +937,9 @@ class Runner:
                 far_plane=cfg.far_plane,
                 masks=masks,
             )
+            if device.type == "cuda":
+                torch.cuda.synchronize()
+            ellipse_time += max(time.time() - tic, 1e-10)
 
             colors = torch.clamp(colors, 0.0, 1.0)
 
@@ -943,10 +955,11 @@ class Runner:
                 metrics["cc_ssim"].append(self.ssim(cc_colors_p, pixels_p))
                 metrics["cc_lpips"].append(self.lpips(cc_colors_p, pixels_p))
 
-
+        ellipse_time /= max(len(valloader), 1)
         stats = {k: torch.stack(v).mean().item() for k, v in metrics.items()}
         stats.update(
             {
+                "ellipse_time": ellipse_time,
                 "num_GS": len(self.splats["means"]),
             }
         )

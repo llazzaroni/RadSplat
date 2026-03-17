@@ -1,6 +1,6 @@
 1) step: build a subset of the dataset:
-FULL=/cluster/scratch/rbollati/dataset/counter
-SUB=/cluster/scratch/rbollati/dataset/counter_sparse
+FULL=/cluster/scratch/rbollati/dataset/treehill
+SUB=/cluster/scratch/rbollati/dataset/treehill_sparse
 N=30
 SEED=42
 
@@ -57,7 +57,7 @@ python - <<'PY'
 import sqlite3
 from pathlib import Path
 
-sub = Path("/cluster/scratch/rbollati/dataset/flowers_sparse")  # change per dataset
+sub = Path("/cluster/scratch/rbollati/dataset/treehill_sparse")  # change per dataset
 txt_in = sub / "sparse/pose_txt"
 txt_out = sub / "sparse/pose_txt_dbids"
 db_path = sub / "database.db"
@@ -129,8 +129,8 @@ ns-train nerfacto \
 3) Run nerf_step to obtain the positions and colors tensor
 
 python ~/RadSplat/RadSplat/nerf_step.py \
-    --nerf-folder /cluster/scratch/rbollati/counter_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/config.yml \
-    --output-name /cluster/scratch/rbollati/counter_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/ray_sample.pt \
+    --nerf-folder /cluster/scratch/rbollati/treehill_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers_try/config.yml \
+    --output-name /cluster/scratch/rbollati/treehill_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers_try/ray_sample.pt \
     --sampling-size 1000000 \
     --ray-sampling-strategy random
 
@@ -179,10 +179,10 @@ python run_gsplat.py default \
 7) Generate the augmented dataset:
 
 python images.py \
-  --nerf-folders /cluster/scratch/rbollati/counter_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/counter_models/nerf_ensemble_2/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/counter_models/nerf_ensemble_3/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/counter_models/nerf_ensemble_4/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/counter_models/nerf_ensemble_5/outputs/ensemble_1/nerfacto/flowers/config.yml \
-  --exp-dirs /cluster/scratch/rbollati/counter_models/nerf_ensemble_1 /cluster/scratch/rbollati/counter_models/nerf_ensemble_2 /cluster/scratch/rbollati/counter_models/nerf_ensemble_3 /cluster/scratch/rbollati/counter_models/nerf_ensemble_4 /cluster/scratch/rbollati/counter_models/nerf_ensemble_5 \
-  --input-dataset /cluster/scratch/rbollati/dataset/counter_sparse \
-  --output-dataset /cluster/scratch/rbollati/dataset/counter_sparse_aug \
+  --nerf-folders /cluster/scratch/rbollati/treehill_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers_try/config.yml /cluster/scratch/rbollati/treehill_models/nerf_ensemble_2/outputs/ensemble_1/nerfacto/flowers_try/config.yml /cluster/scratch/rbollati/treehill_models/nerf_ensemble_3/outputs/ensemble_1/nerfacto/flowers_try/config.yml /cluster/scratch/rbollati/treehill_models/nerf_ensemble_4/outputs/ensemble_1/nerfacto/flowers_try/config.yml /cluster/scratch/rbollati/treehill_models/nerf_ensemble_5/outputs/ensemble_1/nerfacto/flowers_try/config.yml \
+  --exp-dirs /cluster/scratch/rbollati/treehill_models/nerf_ensemble_1 /cluster/scratch/rbollati/treehill_models/nerf_ensemble_2 /cluster/scratch/rbollati/treehill_models/nerf_ensemble_3 /cluster/scratch/rbollati/treehill_models/nerf_ensemble_4 /cluster/scratch/rbollati/treehill_models/nerf_ensemble_5 \
+  --input-dataset /cluster/scratch/rbollati/dataset/treehill_sparse \
+  --output-dataset /cluster/scratch/rbollati/dataset/treehill_sparse_aug \
   --tmp-root /cluster/home/rbollati/tmp \
   --tau 1.5 \
   --debug-plot-dir image_supervision \
@@ -548,30 +548,20 @@ PY
 python utils/rank_gsplat_combo.py \
   --run-dir /cluster/scratch/rbollati/counter_models/gsplat_sfm_l1_nores \
   --run-dir /cluster/scratch/rbollati/counter_models/RadSplat_dual_full_nores_l1_1 \
-  --run-dir /cluster/scratch/rbollati/counter_models/RadSplat_dual_full_nores_l1_2 \
-  --run-dir /cluster/scratch/rbollati/counter_models/RadSplat_staged_full_nores_l1_4 \
-  --run-dir /cluster/scratch/rbollati/counter_models/RadSplat_staged_then_dual_1 \
+  --run-dir /cluster/scratch/rbollati/counter_models/RadSplat_dual_full_nores_l1_5 \
   --label gsplat \
   --label radsplat-dual \
   --label radsplat-dual-2 \
-  --label radsplat-staged \
-  --label radsplat-dual-staged \
   --mode best \
   --max-step 30000
 
 
 
 python utils/plot_gsplat_eval_stats.py \
-  --run-dir /cluster/scratch/rbollati/counter_models/gsplat_sfm_l1_nores \
-  --run-dir /cluster/scratch/rbollati/counter_models/RadSplat_dual_full_nores_l1_1 \
-  --run-dir /cluster/scratch/rbollati/counter_models/RadSplat_dual_full_nores_l1_2 \
-  --run-dir /cluster/scratch/rbollati/counter_models/RadSplat_staged_full_nores_l1_4 \
-  --run-dir /cluster/scratch/rbollati/counter_models/RadSplat_staged_then_dual_1 \
+  --run-dir /cluster/scratch/rbollati/treehill_models/gsplat_sfm_l1_nores \
+  --run-dir /cluster/scratch/rbollati/treehill_models/RadSplat_dual_full_nores_l1_1 \
   --label gsplat \
   --label radsplat-dual \
-  --label radsplat-dual-2 \
-  --label radsplat-staged \
-  --label radsplat-dual-staged \
   --out-dir /cluster/scratch/rbollati/plots \
   --plot-style lines
 
@@ -595,19 +585,19 @@ python run_gsplat_dual.py default \
 
 python run_gsplat_dual.py default \
   --no-nerf-init \
-  --pt-path /cluster/scratch/rbollati/counter_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/ray_sample.pt \
-  --data-dir /cluster/scratch/rbollati/dataset/counter_sparse_aug \
-  --result-dir /cluster/scratch/rbollati/counter_models/RadSplat_dual_full_nores_l1_3 \
+  --pt-path /cluster/scratch/rbollati/treehill_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers_try/ray_sample.pt \
+  --data-dir /cluster/scratch/rbollati/dataset/treehill_sparse_aug \
+  --result-dir /cluster/scratch/rbollati/treehill_models/RadSplat_dual_full_nores_l1_1 \
   --data-factor 1 \
   --nerf-samples-data-factor 8 \
   --batch-size 1 \
-  --nerf-batch-factor 20 \
-  --dual-nerf-decay-steps-to-quarter 1000 \
-  --dual-nerf-disable-threshold 0.05 \
+  --nerf-batch-factor 10 \
+  --dual-nerf-decay-steps-to-quarter 200 \
+  --dual-nerf-disable-threshold 0.1 \
   --max-steps 30000 \
   --strategy.reset-every 100000000 \
   --use-l1-for-real-samples \
-  --dual-nerf-loss-weight 0.5 \
+  --dual-nerf-loss-weight 0 \
   --deterministic
 
 
@@ -672,4 +662,65 @@ python run_gsplat_staged_then_dual.py default \
   --use-l1-for-real-samples \
   --dual-nerf-loss-weight 0.5 \
   --strategy.reset-every 100000000 \
+  --deterministic
+
+
+
+Treehill:
+
+python run_gsplat_dual.py default \
+  --no-nerf-init \
+  --pt-path /cluster/scratch/rbollati/treehill_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers_try/ray_sample.pt \
+  --data-dir /cluster/scratch/rbollati/dataset/treehill_sparse_aug \
+  --result-dir /cluster/scratch/rbollati/treehill_models/RadSplat_dual_full_nores_l1_1 \
+  --data-factor 1 \
+  --nerf-samples-data-factor 8 \
+  --batch-size 1 \
+  --nerf-batch-factor 10 \
+  --dual-nerf-decay-steps-to-quarter 200 \
+  --dual-nerf-disable-threshold 0.1 \
+  --max-steps 30000 \
+  --strategy.reset-every 100000000 \
+  --use-l1-for-real-samples \
+  --dual-nerf-loss-weight 2 \
+  --deterministic
+
+
+Counter:
+
+python run_gsplat_dual.py default \
+  --no-nerf-init \
+  --pt-path /cluster/scratch/rbollati/treehill_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers_try/ray_sample.pt \
+  --data-dir /cluster/scratch/rbollati/dataset/treehill_sparse_aug \
+  --result-dir /cluster/scratch/rbollati/treehill_models/RadSplat_dual_full_nores_l1_1 \
+  --data-factor 1 \
+  --nerf-samples-data-factor 8 \
+  --batch-size 1 \
+  --nerf-batch-factor 10 \
+  --dual-nerf-decay-steps-to-quarter 1000 \
+  --dual-nerf-disable-threshold 0.1 \
+  --max-steps 30000 \
+  --strategy.reset-every 100000000 \
+  --use-l1-for-real-samples \
+  --dual-nerf-loss-weight 0.25 \
+  --deterministic
+
+
+Flowers:
+
+python run_gsplat_dual.py default \
+  --no-nerf-init \
+  --pt-path /cluster/scratch/rbollati/treehill_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers_try/ray_sample.pt \
+  --data-dir /cluster/scratch/rbollati/dataset/treehill_sparse_aug \
+  --result-dir /cluster/scratch/rbollati/treehill_models/RadSplat_dual_full_nores_l1_1 \
+  --data-factor 1 \
+  --nerf-samples-data-factor 8 \
+  --batch-size 1 \
+  --nerf-batch-factor 10 \
+  --dual-nerf-decay-steps-to-quarter 300 \
+  --dual-nerf-disable-threshold 0.1 \
+  --max-steps 30000 \
+  --strategy.reset-every 100000000 \
+  --use-l1-for-real-samples \
+  --dual-nerf-loss-weight 0.5 \
   --deterministic

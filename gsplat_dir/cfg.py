@@ -107,6 +107,24 @@ class Config:
     # If True, NeRF-sample supervision in dual runner uses weighted L1
     # instead of weighted L2.
     use_l1_for_nerf_samples: bool = False
+    # Enable additional depth supervision from NeRF-generated depth maps.
+    use_nerf_depth_supervision: bool = False
+    # Root folder prefix under dataset for NeRF depth maps:
+    # depths_nerf[, depths_nerf_2, depths_nerf_4, depths_nerf_8].
+    nerf_depth_prefix: str = "depths_nerf"
+    # Optional downsample factor for NeRF depth maps. If None, follows sample image factor.
+    nerf_depth_data_factor: Optional[int] = None
+    # Apply NeRF depth supervision on real-image batches.
+    nerf_depth_include_real: bool = True
+    # Apply NeRF depth supervision on nerf_sample batches.
+    nerf_depth_include_nerf_samples: bool = True
+    # Stop applying NeRF depth supervision after this global step.
+    # Set < 0 to keep it active for all training.
+    nerf_depth_max_steps: int = 1000
+    # Weight of NeRF depth supervision term.
+    nerf_depth_lambda: float = 1e-2
+    # If True, compute NeRF depth loss in log-depth space.
+    nerf_depth_log_space: bool = True
 
     # Near plane clipping distance
     near_plane: float = 0.01

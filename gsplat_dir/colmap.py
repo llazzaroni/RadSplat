@@ -1,5 +1,6 @@
 import json
 import os
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import cv2
@@ -354,6 +355,16 @@ class Parser:
             return weight_dir
         return None
 
+    def resolve_depth_dir(self, prefix: str, factor_value: int) -> Optional[str]:
+        if factor_value > 1 and not self.extconf["no_factor_suffix"]:
+            suffix = f"_{factor_value}"
+        else:
+            suffix = ""
+        depth_dir = os.path.join(self.data_dir, prefix + suffix)
+        if os.path.isdir(depth_dir):
+            return depth_dir
+        return None
+
     def _load_split_overrides(self) -> None:
         if not self.split_payload_path:
             return
@@ -439,12 +450,22 @@ class Dataset:
         patch_size: Optional[int] = None,
         load_depths: bool = False,
         use_nerf_factor_for_real: bool = False,
+        load_nerf_depths: bool = False,
+        nerf_depth_prefix: str = "depths_nerf",
+        nerf_depth_factor: Optional[int] = None,
+        nerf_depth_include_real: bool = True,
+        nerf_depth_include_nerf_samples: bool = True,
     ):
         self.parser = parser
         self.split = split
         self.patch_size = patch_size
         self.load_depths = load_depths
         self.use_nerf_factor_for_real = use_nerf_factor_for_real
+        self.load_nerf_depths = load_nerf_depths
+        self.nerf_depth_prefix = nerf_depth_prefix
+        self.nerf_depth_factor = nerf_depth_factor
+        self.nerf_depth_include_real = nerf_depth_include_real
+        self.nerf_depth_include_nerf_samples = nerf_depth_include_nerf_samples
         if self.parser.train_indices_override is not None:
             if split == "train":
                 self.indices = self.parser.train_indices_override
@@ -458,6 +479,7 @@ class Dataset:
                 self.indices = indices[indices % self.parser.test_every == 0]
         self._warned_missing_weight = set()
         self._warned_mixed_undistort = set()
+        self._warned_missing_nerf_depth = set()
 
     def __len__(self):
         return len(self.indices)
@@ -478,6 +500,8 @@ class Dataset:
         camtoworlds = self.parser.camtoworlds[index]
         mask = self.parser.mask_dict[camera_id]
         weight_map = np.ones(image.shape[:2], dtype=np.float32)
+        nerf_depth = np.zeros(image.shape[:2], dtype=np.float32)
+        has_nerf_depth = False
 
         # If nerf samples are loaded at a different factor than real images,
         # scale intrinsics per sample so projections stay consistent.
@@ -504,6 +528,40 @@ class Dataset:
                 print(f"[Dataset] missing weight map for {image_name}: {weight_path}. Using uniform weights.")
                 self._warned_missing_weight.add(weight_path)
 
+        if self.load_nerf_depths:
+            use_sample = (is_nerf_sample and self.nerf_depth_include_nerf_samples) or (
+                (not is_nerf_sample) and self.nerf_depth_include_real
+            )
+            if use_sample:
+                if self.nerf_depth_factor is not None:
+                    depth_factor = int(self.nerf_depth_factor)
+                else:
+                    depth_factor = (
+                        self.parser.nerf_samples_factor
+                        if (is_nerf_sample or self.use_nerf_factor_for_real)
+                        else self.parser.factor
+                    )
+                depth_dir = self.parser.resolve_depth_dir(self.nerf_depth_prefix, depth_factor)
+                if depth_dir is not None:
+                    depth_path = os.path.join(
+                        depth_dir, str(Path(image_name).with_suffix(".npy"))
+                    )
+                    if os.path.isfile(depth_path):
+                        nerf_depth = np.load(depth_path).astype(np.float32)
+                        if nerf_depth.shape != image.shape[:2]:
+                            nerf_depth = cv2.resize(
+                                nerf_depth,
+                                (image.shape[1], image.shape[0]),
+                                interpolation=cv2.INTER_LINEAR,
+                            )
+                        has_nerf_depth = True
+                    elif depth_path not in self._warned_missing_nerf_depth:
+                        print(
+                            f"[Dataset] missing nerf depth for {image_name}: {depth_path}. "
+                            "Depth supervision disabled for this sample."
+                        )
+                        self._warned_missing_nerf_depth.add(depth_path)
+
         if len(params) > 0:
             # Images are distorted. Undistort them.
             mapx, mapy = (
@@ -521,9 +579,13 @@ class Dataset:
             else:
                 image = cv2.remap(image, mapx, mapy, cv2.INTER_LINEAR)
                 weight_map = cv2.remap(weight_map, mapx, mapy, cv2.INTER_LINEAR)
+                if self.load_nerf_depths and has_nerf_depth:
+                    nerf_depth = cv2.remap(nerf_depth, mapx, mapy, cv2.INTER_LINEAR)
                 x, y, w, h = self.parser.roi_undist_dict[camera_id]
                 image = image[y : y + h, x : x + w]
                 weight_map = weight_map[y : y + h, x : x + w]
+                if self.load_nerf_depths and has_nerf_depth:
+                    nerf_depth = nerf_depth[y : y + h, x : x + w]
 
         if self.patch_size is not None:
             # Random crop.
@@ -532,6 +594,8 @@ class Dataset:
             y = np.random.randint(0, max(h - self.patch_size, 1))
             image = image[y : y + self.patch_size, x : x + self.patch_size]
             weight_map = weight_map[y : y + self.patch_size, x : x + self.patch_size]
+            if self.load_nerf_depths and has_nerf_depth:
+                nerf_depth = nerf_depth[y : y + self.patch_size, x : x + self.patch_size]
             K[0, 2] -= x
             K[1, 2] -= y
 
@@ -542,6 +606,8 @@ class Dataset:
             "image_id": item,  # the index of the image in the dataset
             "is_nerf_sample": torch.tensor(is_nerf_sample, dtype=torch.bool),
             "weight_map": torch.from_numpy(weight_map).float(),
+            "nerf_depth": torch.from_numpy(nerf_depth).float(),
+            "has_nerf_depth": torch.tensor(has_nerf_depth, dtype=torch.bool),
         }
         if mask is not None:
             data["mask"] = torch.from_numpy(mask).bool()
