@@ -681,7 +681,7 @@ python run_gsplat_dual.py default \
   --no-nerf-init \
   --pt-path /cluster/scratch/rbollati/treehill_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers_try/ray_sample.pt \
   --data-dir /cluster/scratch/rbollati/dataset/treehill_sparse_aug \
-  --result-dir /cluster/scratch/rbollati/treehill_models/RadSplat_dual_full_nores_l1_1 \
+  --result-dir /cluster/scratch/rbollati/treehill_models/RadSplat_dual_full_nores_l1_2 \
   --data-factor 1 \
   --nerf-samples-data-factor 8 \
   --batch-size 1 \
@@ -692,7 +692,15 @@ python run_gsplat_dual.py default \
   --strategy.reset-every 100000000 \
   --use-l1-for-real-samples \
   --dual-nerf-loss-weight 2 \
-  --deterministic
+  --deterministic \
+  --use-nerf-depth-supervision \
+  --nerf-depth-prefix depths_nerf \
+  --nerf-depth-data-factor 8 \
+  --nerf-depth-include-real \
+  --nerf-depth-include-nerf-samples \
+  --nerf-depth-max-steps 1000 \
+  --nerf-depth-lambda 0.01 \
+  --nerf-depth-log-space
 
 
 Counter:

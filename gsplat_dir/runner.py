@@ -910,6 +910,7 @@ class Runner:
     def eval_allstats(self):
         cfg = self.cfg
         device = self.device
+        is_cuda_device = str(device).startswith("cuda")
 
         valloader = torch.utils.data.DataLoader(
             self.valset, batch_size=1, shuffle=False, num_workers=1
@@ -924,7 +925,7 @@ class Runner:
             masks = data["mask"].to(device) if "mask" in data else None
             height, width = pixels.shape[1:3]
 
-            if device.type == "cuda":
+            if is_cuda_device:
                 torch.cuda.synchronize()
             tic = time.time()
             colors, _, _ = self.rasterize_splats(
@@ -937,7 +938,7 @@ class Runner:
                 far_plane=cfg.far_plane,
                 masks=masks,
             )
-            if device.type == "cuda":
+            if is_cuda_device:
                 torch.cuda.synchronize()
             ellipse_time += max(time.time() - tic, 1e-10)
 
