@@ -3,6 +3,7 @@
 
 import argparse
 from pathlib import Path
+import sys
 from typing import Dict, Iterable, List, Optional, Tuple
 
 import numpy as np
@@ -10,10 +11,18 @@ from PIL import Image
 import torch
 import torch.nn.functional as F
 
+_THIS_FILE = Path(__file__).resolve()
+_REPO_ROOT = _THIS_FILE.parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
 try:
-    from RadSplat.nerfstep.nerf_models import Nerfacto
-except ModuleNotFoundError:
     from nerfstep.nerf_models import Nerfacto
+except ModuleNotFoundError as e:
+    raise ModuleNotFoundError(
+        "Could not import nerfstep.nerf_models. Run this script from the RadSplat repository "
+        "or ensure the repo root is on PYTHONPATH."
+    ) from e
 
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp"}

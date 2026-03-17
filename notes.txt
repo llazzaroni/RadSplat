@@ -665,6 +665,13 @@ python run_gsplat_staged_then_dual.py default \
   --deterministic
 
 
+python utils/generate_nerf_depth_maps.py \
+  --nerf-folder /cluster/scratch/rbollati/counter_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/config.yml \
+  --dataset /cluster/scratch/rbollati/dataset/counter_sparse_aug \
+  --split all \
+  --output-prefix depths_nerf \
+  --overwrite
+
 
 Treehill:
 
