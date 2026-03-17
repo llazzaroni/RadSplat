@@ -4,12 +4,14 @@
 import argparse
 from pathlib import Path
 import sys
+import time
 from typing import Dict, Iterable, List, Optional, Tuple
 
 import numpy as np
 from PIL import Image
 import torch
 import torch.nn.functional as F
+from nerfstudio.cameras.cameras import Cameras, CameraType
 
 _THIS_FILE = Path(__file__).resolve()
 _REPO_ROOT = _THIS_FILE.parents[1]
@@ -23,6 +25,7 @@ except ModuleNotFoundError as e:
         "Could not import nerfstep.nerf_models. Run this script from the RadSplat repository "
         "or ensure the repo root is on PYTHONPATH."
     ) from e
+from gsplat_dir.colmap import Parser as ColmapParser
 
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp"}
@@ -144,18 +147,75 @@ def _collect_entries(model: Nerfacto, split_mode: str) -> List[Tuple[Path, torch
     return entries
 
 
+def _build_camera(
+    device: torch.device,
+    camtoworld_4x4: np.ndarray,
+    K_3x3: np.ndarray,
+    width: int,
+    height: int,
+) -> Cameras:
+    c2w = torch.from_numpy(camtoworld_4x4[:3, :4]).float().unsqueeze(0).to(device)
+    fx = torch.tensor([[float(K_3x3[0, 0])]], dtype=torch.float32, device=device)
+    fy = torch.tensor([[float(K_3x3[1, 1])]], dtype=torch.float32, device=device)
+    cx = torch.tensor([[float(K_3x3[0, 2])]], dtype=torch.float32, device=device)
+    cy = torch.tensor([[float(K_3x3[1, 2])]], dtype=torch.float32, device=device)
+    return Cameras(
+        camera_to_worlds=c2w,
+        fx=fx,
+        fy=fy,
+        cx=cx,
+        cy=cy,
+        width=int(width),
+        height=int(height),
+        camera_type=CameraType.PERSPECTIVE,
+    ).to(device)
+
+
+def _collect_entries_from_dataset(model: Nerfacto, dataset_root: Path) -> List[Tuple[Path, Cameras]]:
+    parser = ColmapParser(
+        data_dir=str(dataset_root),
+        factor=1,
+        nerf_samples_factor=1,
+        normalize=False,
+        test_every=8,
+        split_payload_path="",
+    )
+    entries: List[Tuple[Path, Cameras]] = []
+    for idx, name in enumerate(parser.image_names):
+        rel = rel_to_images_root(Path(str(name)))[1]
+        cam_id = parser.camera_ids[idx]
+        K = parser.Ks_dict[cam_id]
+        width, height = parser.imsize_dict[cam_id]
+        camera = _build_camera(
+            device=model.device,
+            camtoworld_4x4=parser.camtoworlds[idx],
+            K_3x3=K,
+            width=width,
+            height=height,
+        )
+        entries.append((rel, camera))
+    return entries
+
+
 def generate_depth_maps(
     nerf_folder: Path,
     dataset_root: Path,
     output_prefix: str,
     split_mode: str,
+    camera_source: str,
     depth_key: str,
     overwrite: bool,
+    log_every: int,
 ) -> None:
     model = Nerfacto(str(nerf_folder))
     model.pipeline.model.eval()
 
-    entries = _collect_entries(model, split_mode=split_mode)
+    if camera_source == "dataset":
+        entries = _collect_entries_from_dataset(model, dataset_root=dataset_root)
+    elif camera_source == "nerf":
+        entries = _collect_entries(model, split_mode=split_mode)
+    else:
+        raise ValueError(f"Unsupported camera source: {camera_source}")
     if len(entries) == 0:
         raise RuntimeError("No images found in selected split(s).")
 
@@ -179,9 +239,10 @@ def generate_depth_maps(
 
     print(
         f"[depth-gen] entries={len(entries)} base_scale={base_scale} "
-        f"write_scales={write_scales} depth_key={depth_key}"
+        f"write_scales={write_scales} depth_key={depth_key} camera_source={camera_source}"
     )
 
+    start_time = time.time()
     with torch.no_grad():
         for idx, (rel_tail, cam) in enumerate(entries, start=1):
             outputs = model.pipeline.model.get_outputs_for_camera(cam)
@@ -202,8 +263,17 @@ def generate_depth_maps(
                 out_path.parent.mkdir(parents=True, exist_ok=True)
                 np.save(out_path, depth_scaled)
 
-            if idx % 20 == 0 or idx == len(entries):
-                print(f"[depth-gen] rendered {idx}/{len(entries)}")
+            if idx % log_every == 0 or idx == len(entries):
+                elapsed = time.time() - start_time
+                done = idx
+                total = len(entries)
+                pct = 100.0 * float(done) / float(total)
+                secs_per_item = elapsed / float(done)
+                eta = secs_per_item * float(total - done)
+                print(
+                    f"[depth-gen] step {done}/{total} ({pct:.1f}%) "
+                    f"elapsed={elapsed:.1f}s eta={eta:.1f}s"
+                )
 
     print("[depth-gen] done")
     for s in write_scales:
@@ -223,7 +293,13 @@ def parse_args():
         "--split",
         choices=["train", "test", "all"],
         default="all",
-        help="Which dataparser split(s) to render.",
+        help="Which dataparser split(s) to render (used only when --camera-source nerf).",
+    )
+    p.add_argument(
+        "--camera-source",
+        choices=["dataset", "nerf"],
+        default="dataset",
+        help="Camera list source: all dataset COLMAP cameras (dataset) or NeRF dataparser split (nerf).",
     )
     p.add_argument(
         "--depth-key",
@@ -231,6 +307,12 @@ def parse_args():
         help="Model output key for depth. Use 'auto' (default), 'depth', or 'expected_depth'.",
     )
     p.add_argument("--overwrite", action="store_true", help="Allow writing into existing output folders.")
+    p.add_argument(
+        "--log-every",
+        type=int,
+        default=10,
+        help="Print progress stats every N rendered images.",
+    )
     return p.parse_args()
 
 
@@ -241,8 +323,10 @@ def main():
         dataset_root=args.dataset,
         output_prefix=args.output_prefix,
         split_mode=args.split,
+        camera_source=args.camera_source,
         depth_key=args.depth_key,
         overwrite=args.overwrite,
+        log_every=max(1, args.log_every),
     )
 
 
