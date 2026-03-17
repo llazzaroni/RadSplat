@@ -25,7 +25,6 @@ except ModuleNotFoundError as e:
         "Could not import nerfstep.nerf_models. Run this script from the RadSplat repository "
         "or ensure the repo root is on PYTHONPATH."
     ) from e
-from gsplat_dir.colmap import Parser as ColmapParser
 
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp"}
@@ -172,6 +171,14 @@ def _build_camera(
 
 
 def _collect_entries_from_dataset(model: Nerfacto, dataset_root: Path) -> List[Tuple[Path, Cameras]]:
+    try:
+        from gsplat_dir.colmap import Parser as ColmapParser
+    except ModuleNotFoundError as e:
+        raise ModuleNotFoundError(
+            "camera-source=dataset requires pycolmap (used by gsplat_dir.colmap). "
+            "Install pycolmap in this environment or run with --camera-source nerf."
+        ) from e
+
     parser = ColmapParser(
         data_dir=str(dataset_root),
         factor=1,
