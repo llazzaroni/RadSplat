@@ -172,30 +172,71 @@ def _build_camera(
 
 def _collect_entries_from_dataset(model: Nerfacto, dataset_root: Path) -> List[Tuple[Path, Cameras]]:
     try:
-        from gsplat_dir.colmap import Parser as ColmapParser
+        from submodules.nerfstudio.nerfstudio.data.utils.colmap_parsing_utils import (
+            qvec2rotmat,
+            read_model,
+        )
     except ModuleNotFoundError as e:
         raise ModuleNotFoundError(
-            "camera-source=dataset requires pycolmap (used by gsplat_dir.colmap). "
-            "Install pycolmap in this environment or run with --camera-source nerf."
+            "Could not import nerfstudio COLMAP parsing utils."
         ) from e
 
-    parser = ColmapParser(
-        data_dir=str(dataset_root),
-        factor=1,
-        nerf_samples_factor=1,
-        normalize=False,
-        test_every=8,
-        split_payload_path="",
-    )
+    sparse_dir = dataset_root / "sparse" / "0"
+    if not sparse_dir.exists():
+        sparse_dir = dataset_root / "sparse"
+    if not sparse_dir.exists():
+        raise RuntimeError(f"COLMAP sparse model not found under: {dataset_root}/sparse[/0]")
+
+    model_data = read_model(str(sparse_dir))
+    if model_data is None:
+        raise RuntimeError(f"Failed to read COLMAP model from {sparse_dir}")
+    cameras, images, _ = model_data
+
+    def _camera_intrinsics(cam):
+        model_name = str(cam.model)
+        p = cam.params
+        if model_name in (
+            "SIMPLE_PINHOLE",
+            "SIMPLE_RADIAL",
+            "RADIAL",
+            "SIMPLE_RADIAL_FISHEYE",
+            "RADIAL_FISHEYE",
+        ):
+            f, cx, cy = float(p[0]), float(p[1]), float(p[2])
+            fx, fy = f, f
+        elif model_name in (
+            "PINHOLE",
+            "OPENCV",
+            "OPENCV_FISHEYE",
+            "FULL_OPENCV",
+            "THIN_PRISM_FISHEYE",
+            "FOV",
+        ):
+            fx, fy, cx, cy = float(p[0]), float(p[1]), float(p[2]), float(p[3])
+        else:
+            raise RuntimeError(f"Unsupported COLMAP camera model: {model_name}")
+        K = np.array([[fx, 0.0, cx], [0.0, fy, cy], [0.0, 0.0, 1.0]], dtype=np.float32)
+        return K, int(cam.width), int(cam.height)
+
     entries: List[Tuple[Path, Cameras]] = []
-    for idx, name in enumerate(parser.image_names):
-        rel = rel_to_images_root(Path(str(name)))[1]
-        cam_id = parser.camera_ids[idx]
-        K = parser.Ks_dict[cam_id]
-        width, height = parser.imsize_dict[cam_id]
+    for img in sorted(images.values(), key=lambda im: im.name):
+        rel = rel_to_images_root(Path(str(img.name)))[1]
+        cam = cameras[img.camera_id]
+        K, width, height = _camera_intrinsics(cam)
+        # COLMAP stores world->camera (R,t); convert to camera->world.
+        R = qvec2rotmat(img.qvec).astype(np.float32)
+        t = img.tvec.astype(np.float32).reshape(3, 1)
+        w2c = np.concatenate(
+            [
+                np.concatenate([R, t], axis=1),
+                np.array([[0.0, 0.0, 0.0, 1.0]], dtype=np.float32),
+            ],
+            axis=0,
+        )
+        c2w = np.linalg.inv(w2c).astype(np.float32)
         camera = _build_camera(
             device=model.device,
-            camtoworld_4x4=parser.camtoworlds[idx],
+            camtoworld_4x4=c2w,
             K_3x3=K,
             width=width,
             height=height,
