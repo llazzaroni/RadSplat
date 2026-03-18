@@ -560,8 +560,10 @@ python utils/rank_gsplat_combo.py \
 python utils/plot_gsplat_eval_stats.py \
   --run-dir /cluster/scratch/rbollati/treehill_models/gsplat_sfm_l1_nores \
   --run-dir /cluster/scratch/rbollati/treehill_models/RadSplat_dual_full_nores_l1_1 \
+  --run-dir /cluster/scratch/rbollati/treehill_models/RadSplat_dual_full_nores_l1_2 \
   --label gsplat \
   --label radsplat-dual \
+  --label radsplat-depth \
   --out-dir /cluster/scratch/rbollati/plots \
   --plot-style lines
 
@@ -691,7 +693,7 @@ python run_gsplat_dual.py default \
   --max-steps 30000 \
   --strategy.reset-every 100000000 \
   --use-l1-for-real-samples \
-  --dual-nerf-loss-weight 2 \
+  --dual-nerf-loss-weight 0 \
   --deterministic \
   --use-nerf-depth-supervision \
   --nerf-depth-prefix depths_nerf \
@@ -699,7 +701,7 @@ python run_gsplat_dual.py default \
   --nerf-depth-include-real \
   --nerf-depth-include-nerf-samples \
   --nerf-depth-max-steps 1000 \
-  --nerf-depth-lambda 0.01 \
+  --nerf-depth-lambda 0.0 \
   --nerf-depth-log-space
 
 

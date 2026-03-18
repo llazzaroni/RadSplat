@@ -103,6 +103,13 @@ class RunnerDual(Runner):
         nerf_depth_lambda = float(getattr(cfg, "nerf_depth_lambda", 0.0))
         nerf_depth_max_steps = int(getattr(cfg, "nerf_depth_max_steps", -1))
         nerf_depth_log_space = bool(getattr(cfg, "nerf_depth_log_space", True))
+        depth_warmup_steps = int(getattr(cfg, "depth_warmup_steps", 0))
+        depth_warmup_disable_nerf_branch = bool(
+            getattr(cfg, "depth_warmup_disable_nerf_branch", True)
+        )
+        depth_warmup_force_depth = bool(
+            getattr(cfg, "depth_warmup_force_depth_supervision", True)
+        )
         if world_rank == 0:
             print(
                 f"[DualLoader] real train images={len(real_items)}, nerf samples={len(nerf_items)}, "
@@ -119,6 +126,12 @@ class RunnerDual(Runner):
                     f"log_space={nerf_depth_log_space}, max_steps={nerf_depth_max_steps}, "
                     f"include_real={bool(getattr(cfg, 'nerf_depth_include_real', True))}, "
                     f"include_nerf={bool(getattr(cfg, 'nerf_depth_include_nerf_samples', True))}"
+                )
+            if depth_warmup_steps > 0:
+                print(
+                    f"[DualDepthWarmup] steps={depth_warmup_steps}, "
+                    f"disable_nerf_branch={depth_warmup_disable_nerf_branch}, "
+                    f"force_depth_supervision={depth_warmup_force_depth}"
                 )
 
         real_loader = None
@@ -201,6 +214,15 @@ class RunnerDual(Runner):
                 tic = time.time()
 
             real_data, real_iter = self._next_batch(real_loader, real_iter)
+            in_depth_warmup = depth_warmup_steps > 0 and step < depth_warmup_steps
+            if world_rank == 0 and step == depth_warmup_steps and depth_warmup_steps > 0:
+                print(f"[DualDepthWarmup] finished at step={step}; switching to standard dual training.")
+            depth_supervision_active = _depth_supervision_active(step) or (
+                in_depth_warmup
+                and depth_warmup_force_depth
+                and use_nerf_depth
+                and nerf_depth_lambda > 0.0
+            )
             nerf_weight_sched = nerf_weight_start * math.exp(-nerf_decay_k * float(step))
             if nerf_branch_enabled and nerf_weight_sched < nerf_disable_threshold:
                 nerf_branch_enabled = False
@@ -210,8 +232,11 @@ class RunnerDual(Runner):
                         f"(scheduled nerf weight={nerf_weight_sched:.6f} < {nerf_disable_threshold})"
                     )
                     nerf_branch_disabled_printed = True
+            nerf_branch_enabled_this_step = nerf_branch_enabled
+            if in_depth_warmup and depth_warmup_disable_nerf_branch:
+                nerf_branch_enabled_this_step = False
             nerf_data, nerf_iter = (
-                self._next_batch(nerf_loader, nerf_iter) if nerf_branch_enabled else (None, nerf_iter)
+                self._next_batch(nerf_loader, nerf_iter) if nerf_branch_enabled_this_step else (None, nerf_iter)
             )
 
             if real_data is None and nerf_data is None:
@@ -259,7 +284,7 @@ class RunnerDual(Runner):
                 if cfg.pose_opt:
                     camtoworlds = self.pose_adjust(camtoworlds, image_ids)
 
-                render_mode_real = "RGB+ED" if (cfg.depth_loss or _depth_supervision_active(step)) else "RGB"
+                render_mode_real = "RGB+ED" if (cfg.depth_loss or depth_supervision_active) else "RGB"
                 renders, alphas, info = self.rasterize_splats(
                     camtoworlds=camtoworlds,
                     Ks=Ks,
@@ -351,7 +376,7 @@ class RunnerDual(Runner):
                     near_plane=cfg.near_plane,
                     far_plane=cfg.far_plane,
                     image_ids=image_ids,
-                    render_mode="RGB+ED" if _depth_supervision_active(step) else "RGB",
+                    render_mode="RGB+ED" if depth_supervision_active else "RGB",
                     masks=masks,
                 )
                 colors, nerf_depth_pred = (
@@ -408,7 +433,7 @@ class RunnerDual(Runner):
             if wsum <= 0:
                 raise RuntimeError("dual_real_loss_weight + dual_nerf_loss_weight must be > 0.")
             loss = (wr * real_loss + wn * nerf_loss) / wsum
-            if _depth_supervision_active(step):
+            if depth_supervision_active:
                 depth_terms = []
                 if bool(getattr(cfg, "nerf_depth_include_real", True)):
                     depth_terms.append(_compute_nerf_depth_loss(real_depth_pred, real_data))
@@ -432,7 +457,7 @@ class RunnerDual(Runner):
             desc = f"loss={loss.item():.3f}| real={real_loss.item():.3f}| nerf={nerf_loss.item():.3f}| sh degree={sh_degree_to_use}| "
             if depthloss is not None:
                 desc += f"depth loss={depthloss.item():.6f}| "
-            if _depth_supervision_active(step):
+            if depth_supervision_active:
                 desc += f"nerf-depth={depth_supervision_loss.item():.6f}| "
             if pose_err is not None:
                 desc += f"pose err={pose_err.item():.6f}| "
@@ -466,7 +491,7 @@ class RunnerDual(Runner):
                     self.writer.add_scalar("train/depthloss", depthloss.item(), step)
                 if cfg.use_bilateral_grid:
                     self.writer.add_scalar("train/tvloss", tvloss.item(), step)
-                if _depth_supervision_active(step):
+                if depth_supervision_active:
                     self.writer.add_scalar(
                         "train/nerf_depth_supervision_loss",
                         depth_supervision_loss.item(),

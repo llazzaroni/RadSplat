@@ -125,6 +125,15 @@ class Config:
     nerf_depth_lambda: float = 1e-2
     # If True, compute NeRF depth loss in log-depth space.
     nerf_depth_log_space: bool = True
+    # Optional initial warmup phase (in steps) for depth-guided optimization before
+    # switching to standard dual training.
+    depth_warmup_steps: int = 0
+    # During depth warmup, disable the nerf-sample RGB branch and optimize only with
+    # real-image branch (+ optional depth supervision).
+    depth_warmup_disable_nerf_branch: bool = True
+    # During depth warmup, force depth supervision active even if nerf_depth_max_steps
+    # would otherwise disable it.
+    depth_warmup_force_depth_supervision: bool = True
 
     # Near plane clipping distance
     near_plane: float = 0.01
