@@ -131,6 +131,13 @@ class Config:
     # During depth warmup, disable the nerf-sample RGB branch and optimize only with
     # real-image branch (+ optional depth supervision).
     depth_warmup_disable_nerf_branch: bool = True
+    # During depth warmup, disable real-image RGB branch and optimize only with
+    # nerf-sample branch (+ optional depth supervision).
+    depth_warmup_only_nerf_loss: bool = False
+    # During depth warmup, optimize using only NeRF depth supervision loss
+    # (no RGB real/nerf reconstruction term). Depth supervision is evaluated on
+    # both real and nerf-sample batches when available.
+    depth_warmup_only_depth_loss: bool = False
     # During depth warmup, force depth supervision active even if nerf_depth_max_steps
     # would otherwise disable it.
     depth_warmup_force_depth_supervision: bool = True

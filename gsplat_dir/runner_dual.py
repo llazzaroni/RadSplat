@@ -107,6 +107,12 @@ class RunnerDual(Runner):
         depth_warmup_disable_nerf_branch = bool(
             getattr(cfg, "depth_warmup_disable_nerf_branch", True)
         )
+        depth_warmup_only_nerf_loss = bool(
+            getattr(cfg, "depth_warmup_only_nerf_loss", False)
+        )
+        depth_warmup_only_depth_loss = bool(
+            getattr(cfg, "depth_warmup_only_depth_loss", False)
+        )
         depth_warmup_force_depth = bool(
             getattr(cfg, "depth_warmup_force_depth_supervision", True)
         )
@@ -131,6 +137,8 @@ class RunnerDual(Runner):
                 print(
                     f"[DualDepthWarmup] steps={depth_warmup_steps}, "
                     f"disable_nerf_branch={depth_warmup_disable_nerf_branch}, "
+                    f"only_nerf_loss={depth_warmup_only_nerf_loss}, "
+                    f"only_depth_loss={depth_warmup_only_depth_loss}, "
                     f"force_depth_supervision={depth_warmup_force_depth}"
                 )
 
@@ -213,8 +221,11 @@ class RunnerDual(Runner):
                 self.viewer.lock.acquire()
                 tic = time.time()
 
-            real_data, real_iter = self._next_batch(real_loader, real_iter)
             in_depth_warmup = depth_warmup_steps > 0 and step < depth_warmup_steps
+            if in_depth_warmup and depth_warmup_only_nerf_loss and not depth_warmup_only_depth_loss:
+                real_data = None
+            else:
+                real_data, real_iter = self._next_batch(real_loader, real_iter)
             if world_rank == 0 and step == depth_warmup_steps and depth_warmup_steps > 0:
                 print(f"[DualDepthWarmup] finished at step={step}; switching to standard dual training.")
             depth_supervision_active = _depth_supervision_active(step) or (
@@ -224,7 +235,7 @@ class RunnerDual(Runner):
                 and nerf_depth_lambda > 0.0
             )
             nerf_weight_sched = nerf_weight_start * math.exp(-nerf_decay_k * float(step))
-            if nerf_branch_enabled and nerf_weight_sched < nerf_disable_threshold:
+            if (not in_depth_warmup) and nerf_branch_enabled and nerf_weight_sched < nerf_disable_threshold:
                 nerf_branch_enabled = False
                 if world_rank == 0 and not nerf_branch_disabled_printed:
                     print(
@@ -235,6 +246,10 @@ class RunnerDual(Runner):
             nerf_branch_enabled_this_step = nerf_branch_enabled
             if in_depth_warmup and depth_warmup_disable_nerf_branch:
                 nerf_branch_enabled_this_step = False
+            if in_depth_warmup and depth_warmup_only_depth_loss:
+                # Depth-only warmup needs both branches (when available) to contribute
+                # depth supervision, regardless of nerf RGB branch schedule.
+                nerf_branch_enabled_this_step = nerf_loader is not None
             nerf_data, nerf_iter = (
                 self._next_batch(nerf_loader, nerf_iter) if nerf_branch_enabled_this_step else (None, nerf_iter)
             )
@@ -429,15 +444,27 @@ class RunnerDual(Runner):
 
             wr = float(cfg.dual_real_loss_weight) if real_data is not None else 0.0
             wn = float(nerf_weight_sched) if nerf_data is not None else 0.0
-            wsum = wr + wn
-            if wsum <= 0:
-                raise RuntimeError("dual_real_loss_weight + dual_nerf_loss_weight must be > 0.")
-            loss = (wr * real_loss + wn * nerf_loss) / wsum
+            if in_depth_warmup and depth_warmup_only_nerf_loss:
+                wr = 0.0
+                wn = 1.0 if nerf_data is not None else 0.0
+            if in_depth_warmup and depth_warmup_only_depth_loss:
+                loss = torch.tensor(0.0, device=device)
+            else:
+                wsum = wr + wn
+                if wsum <= 0:
+                    raise RuntimeError("dual_real_loss_weight + dual_nerf_loss_weight must be > 0.")
+                loss = (wr * real_loss + wn * nerf_loss) / wsum
             if depth_supervision_active:
                 depth_terms = []
-                if bool(getattr(cfg, "nerf_depth_include_real", True)):
+                use_real_depth = bool(getattr(cfg, "nerf_depth_include_real", True)) or (
+                    in_depth_warmup and depth_warmup_only_depth_loss
+                )
+                use_nerf_depth = bool(getattr(cfg, "nerf_depth_include_nerf_samples", True)) or (
+                    in_depth_warmup and depth_warmup_only_depth_loss
+                )
+                if use_real_depth:
                     depth_terms.append(_compute_nerf_depth_loss(real_depth_pred, real_data))
-                if bool(getattr(cfg, "nerf_depth_include_nerf_samples", True)):
+                if use_nerf_depth:
                     depth_terms.append(_compute_nerf_depth_loss(nerf_depth_pred, nerf_data))
                 if len(depth_terms) > 0:
                     depth_supervision_loss = torch.stack(depth_terms).mean()
