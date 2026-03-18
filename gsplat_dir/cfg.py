@@ -143,6 +143,9 @@ class Config:
     # During depth warmup, force depth supervision active even if nerf_depth_max_steps
     # would otherwise disable it.
     depth_warmup_force_depth_supervision: bool = True
+    # If True, reset optimizer state and restart LR schedules after warmup so that
+    # warmup acts as pre-initialization and does not count toward main training dynamics.
+    depth_warmup_reset_optimizers: bool = True
 
     # Near plane clipping distance
     near_plane: float = 0.01

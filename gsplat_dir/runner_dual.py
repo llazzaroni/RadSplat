@@ -50,6 +50,51 @@ class RunnerDual(Runner):
             batch = next(it)
         return batch, it
 
+    @staticmethod
+    def _reset_optimizer_state(optim):
+        optim.state.clear()
+        optim.zero_grad(set_to_none=True)
+
+    def _build_schedulers(self, phase_steps: int):
+        cfg = self.cfg
+        steps = max(1, int(phase_steps))
+        schedulers = [
+            torch.optim.lr_scheduler.ExponentialLR(
+                self.optimizers["means"], gamma=0.01 ** (1.0 / steps)
+            ),
+        ]
+        if cfg.pose_opt:
+            schedulers.append(
+                torch.optim.lr_scheduler.ExponentialLR(
+                    self.pose_optimizers[0], gamma=0.01 ** (1.0 / steps)
+                )
+            )
+        if cfg.use_bilateral_grid:
+            schedulers.append(
+                torch.optim.lr_scheduler.ChainedScheduler(
+                    [
+                        torch.optim.lr_scheduler.LinearLR(
+                            self.bil_grid_optimizers[0], start_factor=0.01, total_iters=min(1000, steps)
+                        ),
+                        torch.optim.lr_scheduler.ExponentialLR(
+                            self.bil_grid_optimizers[0], gamma=0.01 ** (1.0 / steps)
+                        ),
+                    ]
+                )
+            )
+        return schedulers
+
+    def _reset_phase_optimizers(self, phase_steps: int):
+        for optimizer in self.optimizers.values():
+            self._reset_optimizer_state(optimizer)
+        for optimizer in self.pose_optimizers:
+            self._reset_optimizer_state(optimizer)
+        for optimizer in self.app_optimizers:
+            self._reset_optimizer_state(optimizer)
+        for optimizer in self.bil_grid_optimizers:
+            self._reset_optimizer_state(optimizer)
+        return self._build_schedulers(phase_steps)
+
     def train(self):
         cfg = self.cfg
         device = self.device
@@ -66,31 +111,6 @@ class RunnerDual(Runner):
 
         max_steps = cfg.max_steps
         init_step = 0
-
-        schedulers = [
-            torch.optim.lr_scheduler.ExponentialLR(
-                self.optimizers["means"], gamma=0.01 ** (1.0 / max_steps)
-            ),
-        ]
-        if cfg.pose_opt:
-            schedulers.append(
-                torch.optim.lr_scheduler.ExponentialLR(
-                    self.pose_optimizers[0], gamma=0.01 ** (1.0 / max_steps)
-                )
-            )
-        if cfg.use_bilateral_grid:
-            schedulers.append(
-                torch.optim.lr_scheduler.ChainedScheduler(
-                    [
-                        torch.optim.lr_scheduler.LinearLR(
-                            self.bil_grid_optimizers[0], start_factor=0.01, total_iters=1000
-                        ),
-                        torch.optim.lr_scheduler.ExponentialLR(
-                            self.bil_grid_optimizers[0], gamma=0.01 ** (1.0 / max_steps)
-                        ),
-                    ]
-                )
-            )
 
         real_items, nerf_items = self._build_dual_subsets()
         decay_steps = max(1, int(getattr(cfg, "dual_nerf_decay_steps_to_quarter", 1000)))
@@ -119,6 +139,13 @@ class RunnerDual(Runner):
         depth_warmup_force_depth = bool(
             getattr(cfg, "depth_warmup_force_depth_supervision", True)
         )
+        depth_warmup_reset_optimizers = bool(
+            getattr(cfg, "depth_warmup_reset_optimizers", True)
+        )
+        warmup_reset_enabled = depth_warmup_steps > 0 and depth_warmup_reset_optimizers
+        remaining_main_steps = max(1, max_steps - max(0, depth_warmup_steps))
+        schedulers = self._build_schedulers(depth_warmup_steps if warmup_reset_enabled else max_steps)
+        switched_to_main_phase = False
         if world_rank == 0:
             print(
                 f"[DualLoader] real train images={len(real_items)}, nerf samples={len(nerf_items)}, "
@@ -143,7 +170,8 @@ class RunnerDual(Runner):
                     f"disable_nerf_branch={depth_warmup_disable_nerf_branch}, "
                     f"only_nerf_loss={depth_warmup_only_nerf_loss}, "
                     f"only_depth_loss={depth_warmup_only_depth_loss}, "
-                    f"force_depth_supervision={depth_warmup_force_depth}"
+                    f"force_depth_supervision={depth_warmup_force_depth}, "
+                    f"reset_optimizers={warmup_reset_enabled}"
                 )
 
         real_loader = None
@@ -234,6 +262,14 @@ class RunnerDual(Runner):
                 tic = time.time()
 
             in_depth_warmup = depth_warmup_steps > 0 and step < depth_warmup_steps
+            if warmup_reset_enabled and (not in_depth_warmup) and (not switched_to_main_phase):
+                switched_to_main_phase = True
+                schedulers = self._reset_phase_optimizers(remaining_main_steps)
+                if world_rank == 0:
+                    print(
+                        f"[DualDepthWarmup] optimizer/scheduler reset at step={step}; "
+                        f"main_phase_steps={remaining_main_steps}"
+                    )
             if in_depth_warmup and depth_warmup_only_nerf_loss and not depth_warmup_only_depth_loss:
                 real_data = None
             else:
@@ -246,7 +282,10 @@ class RunnerDual(Runner):
                 and use_nerf_depth
                 and nerf_depth_lambda > 0.0
             )
-            nerf_weight_sched = nerf_weight_start * math.exp(-nerf_decay_k * float(step))
+            effective_step = step - depth_warmup_steps if warmup_reset_enabled else step
+            effective_step = max(0, int(effective_step))
+            strategy_active = not (warmup_reset_enabled and in_depth_warmup)
+            nerf_weight_sched = nerf_weight_start * math.exp(-nerf_decay_k * float(effective_step))
             if (not in_depth_warmup) and nerf_branch_enabled and nerf_weight_sched < nerf_disable_threshold:
                 nerf_branch_enabled = False
                 if world_rank == 0 and not nerf_branch_disabled_printed:
@@ -269,7 +308,7 @@ class RunnerDual(Runner):
             if real_data is None and nerf_data is None:
                 raise RuntimeError("Both real and nerf loaders are empty.")
 
-            sh_degree_to_use = min(step // cfg.sh_degree_interval, cfg.sh_degree)
+            sh_degree_to_use = min(effective_step // cfg.sh_degree_interval, cfg.sh_degree)
             num_train_rays_per_step = 0
 
             real_loss = torch.tensor(0.0, device=device)
@@ -446,13 +485,14 @@ class RunnerDual(Runner):
             info_main = real_info if real_info is not None else nerf_info
             Ks_main = real_Ks if real_Ks is not None else nerf_Ks
 
-            self.cfg.strategy.step_pre_backward(
-                params=self.splats,
-                optimizers=self.optimizers,
-                state=self.strategy_state,
-                step=step,
-                info=info_main,
-            )
+            if strategy_active:
+                self.cfg.strategy.step_pre_backward(
+                    params=self.splats,
+                    optimizers=self.optimizers,
+                    state=self.strategy_state,
+                    step=effective_step,
+                    info=info_main,
+                )
 
             wr = float(cfg.dual_real_loss_weight) if real_data is not None else 0.0
             wn = float(nerf_weight_sched) if nerf_data is not None else 0.0
@@ -542,13 +582,14 @@ class RunnerDual(Runner):
                     self.writer.add_image("train/render", canvas, step)
                 self.writer.flush()
 
-            if step in [i - 1 for i in cfg.save_steps]:
+            save_step = effective_step if warmup_reset_enabled else step
+            if (not in_depth_warmup or not warmup_reset_enabled) and save_step in [i - 1 for i in cfg.save_steps]:
                 mem = torch.cuda.max_memory_allocated() / 1024**3
                 stats = {"mem": mem, "ellipse_time": time.time() - global_tic, "num_GS": len(self.splats["means"])}
                 print("Step: ", step, stats)
                 with open(f"{self.stats_dir}/train_step{step:04d}_rank{self.world_rank}.json", "w") as f:
                     json.dump(stats, f)
-                data = {"step": step, "splats": self.splats.state_dict()}
+                data = {"step": save_step, "global_step": step, "splats": self.splats.state_dict()}
                 if cfg.pose_opt:
                     data["pose_adjust"] = self.pose_adjust.module.state_dict() if world_size > 1 else self.pose_adjust.state_dict()
                 if cfg.app_opt:
@@ -594,28 +635,30 @@ class RunnerDual(Runner):
             for scheduler in schedulers:
                 scheduler.step()
 
-            if isinstance(self.cfg.strategy, DefaultStrategy):
-                self.cfg.strategy.step_post_backward(
-                    params=self.splats,
-                    optimizers=self.optimizers,
-                    state=self.strategy_state,
-                    step=step,
-                    info=info_main,
-                    packed=cfg.packed,
-                )
-            elif isinstance(self.cfg.strategy, MCMCStrategy):
-                self.cfg.strategy.step_post_backward(
-                    params=self.splats,
-                    optimizers=self.optimizers,
-                    state=self.strategy_state,
-                    step=step,
-                    info=info_main,
-                    lr=schedulers[0].get_last_lr()[0],
-                )
-            else:
-                assert_never(self.cfg.strategy)
+            if strategy_active:
+                if isinstance(self.cfg.strategy, DefaultStrategy):
+                    self.cfg.strategy.step_post_backward(
+                        params=self.splats,
+                        optimizers=self.optimizers,
+                        state=self.strategy_state,
+                        step=effective_step,
+                        info=info_main,
+                        packed=cfg.packed,
+                    )
+                elif isinstance(self.cfg.strategy, MCMCStrategy):
+                    self.cfg.strategy.step_post_backward(
+                        params=self.splats,
+                        optimizers=self.optimizers,
+                        state=self.strategy_state,
+                        step=effective_step,
+                        info=info_main,
+                        lr=schedulers[0].get_last_lr()[0],
+                    )
+                else:
+                    assert_never(self.cfg.strategy)
 
-            if step % 100 == 0:
+            do_eval = (effective_step % 100 == 0) and (not in_depth_warmup or not warmup_reset_enabled)
+            if do_eval:
                 eval_stats = self.eval_allstats()
                 if world_rank == 0:
                     # Combined lower-is-better validation score:
@@ -626,13 +669,14 @@ class RunnerDual(Runner):
                             * math.sqrt(max(0.0, 1.0 - float(eval_stats["ssim"])))
                             * float(eval_stats["lpips"])
                         ) ** (1.0 / 3.0)
-                        self.writer.add_scalar("val/combined_score", val_combo, step)
+                        self.writer.add_scalar("val/combined_score", val_combo, effective_step)
                         self.writer.flush()
                         if val_combo < best_val_combo:
                             best_val_combo = val_combo
-                            best_val_step = step
+                            best_val_step = effective_step
                             best_ckpt = {
-                                "step": step,
+                                "step": effective_step,
+                                "global_step": step,
                                 "best_val_combo": best_val_combo,
                                 "best_val_step": best_val_step,
                                 "splats": self.splats.state_dict(),
