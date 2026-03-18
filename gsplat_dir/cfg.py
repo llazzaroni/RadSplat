@@ -125,6 +125,8 @@ class Config:
     nerf_depth_lambda: float = 1e-2
     # If True, compute NeRF depth loss in log-depth space.
     nerf_depth_log_space: bool = True
+    # If True, weight depth supervision using per-pixel uncertainty/weight_map.
+    nerf_depth_use_uncertainty_weights: bool = True
     # Optional initial warmup phase (in steps) for depth-guided optimization before
     # switching to standard dual training.
     depth_warmup_steps: int = 0

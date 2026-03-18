@@ -103,6 +103,9 @@ class RunnerDual(Runner):
         nerf_depth_lambda = float(getattr(cfg, "nerf_depth_lambda", 0.0))
         nerf_depth_max_steps = int(getattr(cfg, "nerf_depth_max_steps", -1))
         nerf_depth_log_space = bool(getattr(cfg, "nerf_depth_log_space", True))
+        nerf_depth_use_uncertainty_weights = bool(
+            getattr(cfg, "nerf_depth_use_uncertainty_weights", True)
+        )
         depth_warmup_steps = int(getattr(cfg, "depth_warmup_steps", 0))
         depth_warmup_disable_nerf_branch = bool(
             getattr(cfg, "depth_warmup_disable_nerf_branch", True)
@@ -130,6 +133,7 @@ class RunnerDual(Runner):
                 print(
                     f"[DualDepth] enabled: lambda={nerf_depth_lambda}, "
                     f"log_space={nerf_depth_log_space}, max_steps={nerf_depth_max_steps}, "
+                    f"use_uncertainty_weights={nerf_depth_use_uncertainty_weights}, "
                     f"include_real={bool(getattr(cfg, 'nerf_depth_include_real', True))}, "
                     f"include_nerf={bool(getattr(cfg, 'nerf_depth_include_nerf_samples', True))}"
                 )
@@ -203,12 +207,20 @@ class RunnerDual(Runner):
             if not bool(valid.any().item()):
                 return torch.tensor(0.0, device=device)
             if nerf_depth_log_space:
-                pred_v = torch.log(torch.clamp(pred[valid], min=eps))
-                tgt_v = torch.log(torch.clamp(tgt[valid], min=eps))
+                pred_map = torch.log(torch.clamp(pred, min=eps))
+                tgt_map = torch.log(torch.clamp(tgt, min=eps))
             else:
-                pred_v = pred[valid]
-                tgt_v = tgt[valid]
-            return F.l1_loss(pred_v, tgt_v)
+                pred_map = pred
+                tgt_map = tgt
+            err = torch.abs(pred_map - tgt_map)
+            if nerf_depth_use_uncertainty_weights and "weight_map" in data_batch:
+                w = torch.clamp(data_batch["weight_map"].to(device).float(), min=0.0)
+                if w.shape == err.shape:
+                    w = w * valid.float()
+                    wsum = w.sum()
+                    if bool((wsum > 0).item()):
+                        return (err * w).sum() / torch.clamp(wsum, min=eps)
+            return err[valid].mean()
 
         global_tic = time.time()
         pbar = tqdm.tqdm(range(init_step, max_steps))
