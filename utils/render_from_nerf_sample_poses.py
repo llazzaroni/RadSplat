@@ -19,6 +19,7 @@ if str(_REPO_ROOT) not in sys.path:
 from gsplat_dir.cfg import Config
 from gsplat_dir.runner import Runner
 from submodules.gsplat.gsplat.strategy import DefaultStrategy
+from submodules.gsplat.examples.datasets.normalize import transform_cameras
 from submodules.nerfstudio.nerfstudio.data.utils.colmap_parsing_utils import (
     qvec2rotmat,
     read_cameras_binary,
@@ -49,7 +50,7 @@ def _load_ckpt(runner: Runner, ckpt_path: str):
     return int(ckpt.get("step", -1))
 
 
-def _camera_from_colmap(img, cam, device: str, out_w: int, out_h: int):
+def _camera_from_colmap(img, cam, device: str, out_w: int, out_h: int, world_transform: np.ndarray):
     model = str(cam.model)
     p = cam.params
     if model in ("SIMPLE_PINHOLE", "SIMPLE_RADIAL", "RADIAL", "SIMPLE_RADIAL_FISHEYE", "RADIAL_FISHEYE"):
@@ -75,6 +76,7 @@ def _camera_from_colmap(img, cam, device: str, out_w: int, out_h: int):
         axis=0,
     )
     c2w = np.linalg.inv(w2c).astype(np.float32)
+    c2w = transform_cameras(world_transform.astype(np.float32), c2w[None])[0]
 
     c2w_t = torch.from_numpy(c2w).float().unsqueeze(0).to(device)
     K = torch.tensor(
@@ -148,7 +150,14 @@ def main():
             gt_u8 = None
             out_w, out_h = int(cam.width), int(cam.height)
 
-        c2w_t, K = _camera_from_colmap(im, cam, runner.device, out_w=out_w, out_h=out_h)
+        c2w_t, K = _camera_from_colmap(
+            im,
+            cam,
+            runner.device,
+            out_w=out_w,
+            out_h=out_h,
+            world_transform=runner.parser.transform,
+        )
         renders, _, _ = runner.rasterize_splats(
             camtoworlds=c2w_t,
             Ks=K,

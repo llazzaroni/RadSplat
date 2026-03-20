@@ -1,6 +1,6 @@
 1) step: build a subset of the dataset:
-FULL=/cluster/scratch/rbollati/dataset/treehill
-SUB=/cluster/scratch/rbollati/dataset/treehill_sparse
+FULL=/cluster/scratch/rbollati/dataset/bicycle
+SUB=/cluster/scratch/rbollati/dataset/bicycle_sparse
 N=30
 SEED=42
 
