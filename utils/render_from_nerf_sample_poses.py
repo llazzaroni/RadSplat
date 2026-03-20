@@ -76,7 +76,7 @@ def _camera_from_colmap(img, cam, device: str, out_w: int, out_h: int):
     )
     c2w = np.linalg.inv(w2c).astype(np.float32)
 
-    c2w_t = torch.from_numpy(c2w[:3, :4]).float().unsqueeze(0).to(device)
+    c2w_t = torch.from_numpy(c2w).float().unsqueeze(0).to(device)
     K = torch.tensor(
         [[fx, 0.0, cx], [0.0, fy, cy], [0.0, 0.0, 1.0]],
         dtype=torch.float32,
