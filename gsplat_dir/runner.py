@@ -21,7 +21,16 @@ from submodules.gsplat.examples.datasets.traj import (
     generate_interpolated_path,
     generate_spiral_path,
 )
-from fused_ssim import fused_ssim
+try:
+    from fused_ssim import fused_ssim
+except Exception as e:
+    _FUSED_SSIM_IMPORT_ERROR = e
+
+    def fused_ssim(*args, **kwargs):
+        raise RuntimeError(
+            "fused_ssim is unavailable in this environment "
+            f"(import error: {_FUSED_SSIM_IMPORT_ERROR})."
+        )
 from torch import Tensor
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.tensorboard import SummaryWriter
