@@ -691,6 +691,7 @@ def main(args):
         model = Nerfacto(folders[0])
 
     cams = model.pipeline.datamanager.train_dataset.cameras.to('cpu')
+    dpo = model.pipeline.datamanager.train_dataparser_outputs
     c2w = cams.camera_to_worlds.cpu()
     cam_positions = c2w[..., :3, 3]
 
@@ -798,9 +799,15 @@ def main(args):
     )
 
     colmap_dir = Path(final_dir) / "sparse" / "0"
+    # NeRF cameras live in Nerfstudio's transformed frame (auto-orient / center / scale).
+    # Convert sampled poses back to original COLMAP world frame before writing images.bin.
+    new_c2w_colmap = dpo.transform_poses_to_original_space(
+        new_c2w_kept2.cpu(),
+        camera_convention="opencv",
+    )
     append_nerf_images_to_colmap(
         colmap_dir=str(colmap_dir),
-        new_c2w=new_c2w_kept2.cpu(),   # (K,3,4) on CPU is fine
+        new_c2w=new_c2w_colmap.cpu(),   # (K,3,4) in original COLMAP frame
     )
     print(f"[done] final augmented dataset written to: {final_dir}")
 
