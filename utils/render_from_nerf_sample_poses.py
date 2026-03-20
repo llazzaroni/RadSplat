@@ -10,7 +10,6 @@ from pathlib import Path
 import imageio.v2 as imageio
 import numpy as np
 import torch
-from nerfstudio.cameras.cameras import CameraType, Cameras
 
 _THIS_FILE = Path(__file__).resolve()
 _REPO_ROOT = _THIS_FILE.parents[1]
@@ -78,17 +77,12 @@ def _camera_from_colmap(img, cam, device: str, out_w: int, out_h: int):
     c2w = np.linalg.inv(w2c).astype(np.float32)
 
     c2w_t = torch.from_numpy(c2w[:3, :4]).float().unsqueeze(0).to(device)
-    cams = Cameras(
-        camera_to_worlds=c2w_t,
-        fx=torch.tensor([[fx]], dtype=torch.float32, device=device),
-        fy=torch.tensor([[fy]], dtype=torch.float32, device=device),
-        cx=torch.tensor([[cx]], dtype=torch.float32, device=device),
-        cy=torch.tensor([[cy]], dtype=torch.float32, device=device),
-        width=int(out_w),
-        height=int(out_h),
-        camera_type=CameraType.PERSPECTIVE,
-    ).to(device)
-    return cams
+    K = torch.tensor(
+        [[fx, 0.0, cx], [0.0, fy, cy], [0.0, 0.0, 1.0]],
+        dtype=torch.float32,
+        device=device,
+    ).unsqueeze(0)
+    return c2w_t, K
 
 
 def _resolve_gt_path(dataset: Path, name: str):
@@ -154,10 +148,10 @@ def main():
             gt_u8 = None
             out_w, out_h = int(cam.width), int(cam.height)
 
-        cam_obj = _camera_from_colmap(im, cam, runner.device, out_w=out_w, out_h=out_h)
+        c2w_t, K = _camera_from_colmap(im, cam, runner.device, out_w=out_w, out_h=out_h)
         renders, _, _ = runner.rasterize_splats(
-            camtoworlds=cam_obj.camera_to_worlds,
-            Ks=cam_obj.get_intrinsics_matrices().to(runner.device),
+            camtoworlds=c2w_t,
+            Ks=K,
             width=out_w,
             height=out_h,
             sh_degree=runner.cfg.sh_degree,
