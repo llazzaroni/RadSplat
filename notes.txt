@@ -760,7 +760,7 @@ python run_gsplat_dual.py default \
   --dual-nerf-loss-weight 2 \
   --deterministic
 
-python utils/render_nerf_sample_views.py \
+python ~/RadSplat/RadSplat/utils/render_nerf_sample_views.py \
   --ckpt /cluster/scratch/rbollati/flowers_models/RadSplat_dual_full_nores_l2_2/ckpts/best_ckpt_rank0.pt \
   --data-dir /cluster/scratch/rbollati/dataset/flowers_sparse_aug \
   --out-dir /cluster/scratch/rbollati/flowers_models/render_nerf_samples \
