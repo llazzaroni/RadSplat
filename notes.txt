@@ -770,3 +770,9 @@ python utils/render_nerf_sample_views.py \
   --max-train-views 30 \
   --max-val-views 4 \
   --save-side-by-side
+
+python ~/RadSplat/RadSplat/utils/check_export_convention.py \
+  --nerf-config /cluster/scratch/rbollati/flowers_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/config.yml \
+  --dataset /cluster/scratch/rbollati/dataset/flowers_sparse \
+  --max-images 200
+

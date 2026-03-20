@@ -90,24 +90,25 @@ def _render_indices(
     if save_side_by_side:
         out_sbs.mkdir(parents=True, exist_ok=True)
 
+    # Build global-index -> local-index maps so we can fetch the exact preprocessed
+    # training/validation sample (same undistortion/scaling path used in training).
+    train_g2l = {int(g): i for i, g in enumerate(runner.trainset.indices)}
+    val_g2l = {int(g): i for i, g in enumerate(runner.valset.indices)}
+
     for i, idx in enumerate(indices, start=1):
         name = runner.parser.image_names[idx]
-        gt_path = (
-            runner.parser.image_paths_nerf[idx]
-            if _is_nerf_sample(name)
-            else runner.parser.image_paths[idx]
-        )
-        gt_u8 = imageio.imread(gt_path)[..., :3]
+        if idx in train_g2l:
+            data = runner.trainset[train_g2l[idx]]
+        elif idx in val_g2l:
+            data = runner.valset[val_g2l[idx]]
+        else:
+            raise RuntimeError(f"Global image index {idx} not found in train/val datasets.")
+
+        gt = data["image"].detach().cpu().numpy()
+        gt_u8 = _to_uint8(gt)
         gt_h, gt_w = gt_u8.shape[:2]
-        camera_id = runner.parser.camera_ids[idx]
-        K_np = runner.parser.Ks_dict[camera_id].copy()
-        base_w, base_h = runner.parser.imsize_dict[camera_id]
-        sx = gt_w / float(base_w)
-        sy = gt_h / float(base_h)
-        K_np[0, :] *= sx
-        K_np[1, :] *= sy
-        K = torch.from_numpy(K_np).float().to(runner.device)[None]
-        c2w = torch.from_numpy(runner.parser.camtoworlds[idx]).float().to(runner.device)[None]
+        K = data["K"].to(runner.device)[None]
+        c2w = data["camtoworld"].to(runner.device)[None]
 
         renders, _, _ = runner.rasterize_splats(
             camtoworlds=c2w,
