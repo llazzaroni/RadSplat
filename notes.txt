@@ -179,10 +179,10 @@ python run_gsplat.py default \
 7) Generate the augmented dataset:
 
 python images.py \
-  --nerf-folders /cluster/scratch/rbollati/treehill_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers_try/config.yml /cluster/scratch/rbollati/treehill_models/nerf_ensemble_2/outputs/ensemble_1/nerfacto/flowers_try/config.yml /cluster/scratch/rbollati/treehill_models/nerf_ensemble_3/outputs/ensemble_1/nerfacto/flowers_try/config.yml /cluster/scratch/rbollati/treehill_models/nerf_ensemble_4/outputs/ensemble_1/nerfacto/flowers_try/config.yml /cluster/scratch/rbollati/treehill_models/nerf_ensemble_5/outputs/ensemble_1/nerfacto/flowers_try/config.yml \
-  --exp-dirs /cluster/scratch/rbollati/treehill_models/nerf_ensemble_1 /cluster/scratch/rbollati/treehill_models/nerf_ensemble_2 /cluster/scratch/rbollati/treehill_models/nerf_ensemble_3 /cluster/scratch/rbollati/treehill_models/nerf_ensemble_4 /cluster/scratch/rbollati/treehill_models/nerf_ensemble_5 \
-  --input-dataset /cluster/scratch/rbollati/dataset/treehill_sparse \
-  --output-dataset /cluster/scratch/rbollati/dataset/treehill_sparse_aug \
+  --nerf-folders /cluster/scratch/rbollati/flowers_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/flowers_models/nerf_ensemble_2/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/flowers_models/nerf_ensemble_3/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/flowers_models/nerf_ensemble_4/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/flowers_models/nerf_ensemble_5/outputs/ensemble_1/nerfacto/flowers/config.yml \
+  --exp-dirs /cluster/scratch/rbollati/flowers_models/nerf_ensemble_1 /cluster/scratch/rbollati/flowers_models/nerf_ensemble_2 /cluster/scratch/rbollati/flowers_models/nerf_ensemble_3 /cluster/scratch/rbollati/flowers_models/nerf_ensemble_4 /cluster/scratch/rbollati/flowers_models/nerf_ensemble_5 \
+  --input-dataset /cluster/scratch/rbollati/dataset/flowers_sparse \
+  --output-dataset /cluster/scratch/rbollati/dataset/flowers_sparse_aug \
   --tmp-root /cluster/home/rbollati/tmp \
   --tau 1.5 \
   --debug-plot-dir image_supervision \
@@ -770,27 +770,3 @@ python utils/render_nerf_sample_views.py \
   --max-train-views 30 \
   --max-val-views 4 \
   --save-side-by-side
-
-
-python - <<'PY'
-import torch, os
-from pathlib import Path
-from submodules.nerfstudio.nerfstudio.data.utils.colmap_parsing_utils import read_images_binary
-
-dataset = Path("/cluster/scratch/rbollati/dataset/flowers_sparse_aug")
-sample_pt = Path("/cluster/scratch/rbollati/flowers_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/ray_sample.pt")
-
-payload = torch.load(sample_pt, map_location="cpu")
-print("sample.pt keys:", sorted(payload.keys()))
-
-imgs = read_images_binary(dataset/"sparse/0/images.bin")
-colmap_names = {os.path.basename(im.name) for im in imgs.values()}
-
-train_rel = payload.get("train_image_filenames_rel", payload.get("image_filenames_rel", []))
-val_rel = payload.get("val_image_filenames_rel", [])
-train_names = {os.path.basename(str(x)) for x in train_rel}
-val_names = {os.path.basename(str(x)) for x in val_rel}
-
-print("train in sample.pt:", len(train_names), "missing in COLMAP:", len(train_names-colmap_names))
-print("val in sample.pt:", len(val_names), "missing in COLMAP:", len(val_names-colmap_names))
-PY
