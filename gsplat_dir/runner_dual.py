@@ -205,6 +205,7 @@ class RunnerDual(Runner):
         nerf_iter = None
         real_use_l1 = bool(getattr(cfg, "use_l1_for_real_samples", False))
         nerf_use_l1 = bool(getattr(cfg, "use_l1_for_nerf_samples", False))
+        nerf_ssim_lambda = float(getattr(cfg, "nerf_ssim_lambda", 0.0))
 
         def _depth_supervision_active(cur_step: int) -> bool:
             if not use_nerf_depth:
@@ -325,6 +326,7 @@ class RunnerDual(Runner):
 
             nerf_loss = torch.tensor(0.0, device=device)
             nerf_reconloss = torch.tensor(0.0, device=device)
+            nerf_ssimloss = torch.tensor(0.0, device=device)
             nerf_info = None
             nerf_Ks = None
             nerf_depth_pred = None
@@ -477,7 +479,16 @@ class RunnerDual(Runner):
                 denom = torch.clamp(w.sum(dim=(1, 2)), min=1e-8)
                 per_img = (recon_map * w).sum(dim=(1, 2)) / denom
                 nerf_reconloss = per_img.mean()
-                nerf_loss = nerf_reconloss
+                if nerf_ssim_lambda > 0.0:
+                    nerf_ssimloss = 1.0 - fused_ssim(
+                        colors.permute(0, 3, 1, 2),
+                        pixels.permute(0, 3, 1, 2),
+                        padding="valid",
+                    )
+                nerf_loss = (
+                    nerf_reconloss * (1.0 - nerf_ssim_lambda)
+                    + nerf_ssimloss * nerf_ssim_lambda
+                )
 
                 nerf_info = info
                 nerf_Ks = Ks
@@ -555,6 +566,7 @@ class RunnerDual(Runner):
                     self.writer.add_scalar("train/l2loss", real_recon_loss.item(), step)
                 self.writer.add_scalar("train/ssimloss", ssimloss.item(), step)
                 self.writer.add_scalar("train/nerf_weighted_reconloss", nerf_reconloss.item(), step)
+                self.writer.add_scalar("train/nerf_ssimloss", nerf_ssimloss.item(), step)
                 if nerf_use_l1:
                     self.writer.add_scalar("train/nerf_weighted_l1loss", nerf_reconloss.item(), step)
                 else:

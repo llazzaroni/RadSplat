@@ -107,6 +107,9 @@ class Config:
     # If True, NeRF-sample supervision in dual runner uses weighted L1
     # instead of weighted L2.
     use_l1_for_nerf_samples: bool = False
+    # Weight for SSIM term on nerf-sample RGB supervision in dual runner.
+    # nerf_loss = weighted_recon * (1-nerf_ssim_lambda) + nerf_ssim * nerf_ssim_lambda
+    nerf_ssim_lambda: float = 0.0
     # Enable additional depth supervision from NeRF-generated depth maps.
     use_nerf_depth_supervision: bool = False
     # Root folder prefix under dataset for NeRF depth maps:

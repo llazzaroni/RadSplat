@@ -558,12 +558,12 @@ python utils/rank_gsplat_combo.py \
 
 
 python utils/plot_gsplat_eval_stats.py \
-  --run-dir /cluster/scratch/rbollati/treehill_models/gsplat_sfm_l1_nores \
-  --run-dir /cluster/scratch/rbollati/treehill_models/RadSplat_dual_full_nores_l1_1 \
-  --run-dir /cluster/scratch/rbollati/treehill_models/RadSplat_depthwarmup_dual \
-  --label gsplat \
-  --label radsplat-dual \
-  --label radsplat-depth \
+  --run-dir /cluster/scratch/rbollati/flowers_models/gsplat_sfm_l2_nores \
+  --run-dir /cluster/scratch/rbollati/flowers_models/RadSplat_dual_full_nores_l2_1 \
+  --run-dir /cluster/scratch/rbollati/flowers_models/RadSplat_dual_full_nores_l2_2 \
+  --label gsplat-l2 \
+  --label radsplat-dual-l2 \
+  --label radsplat-dual-l2-2 \
   --out-dir /cluster/scratch/rbollati/plots \
   --plot-style lines
 
@@ -744,31 +744,28 @@ python run_gsplat_dual.py default \
   --dual-nerf-loss-weight 0.5 \
   --deterministic
 
-python run_gsplat_depth_dual.py default \
+python run_gsplat_dual.py default \
   --no-nerf-init \
-  --pt-path /cluster/scratch/rbollati/treehill_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers_try/ray_sample.pt \
-  --data-dir /cluster/scratch/rbollati/dataset/treehill_sparse_aug \
-  --result-dir /cluster/scratch/rbollati/treehill_models/RadSplat_depthwarmup_dual \
+  --pt-path /cluster/scratch/rbollati/flowers_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/ray_sample.pt \
+  --data-dir /cluster/scratch/rbollati/dataset/flowers_sparse_aug \
+  --result-dir /cluster/scratch/rbollati/flowers_models/RadSplat_dual_full_nores_l2_2 \
   --data-factor 1 \
   --nerf-samples-data-factor 8 \
   --batch-size 1 \
   --nerf-batch-factor 20 \
+  --dual-nerf-decay-steps-to-quarter 300 \
+  --dual-nerf-disable-threshold 0.1 \
   --max-steps 30000 \
   --strategy.reset-every 100000000 \
-  --use-l1-for-real-samples \
   --dual-nerf-loss-weight 2 \
-  --dual-nerf-decay-steps-to-quarter 200 \
-  --dual-nerf-disable-threshold 0.1 \
-  --deterministic \
-  --use-nerf-depth-supervision \
-  --nerf-depth-prefix depths_nerf \
-  --nerf-depth-data-factor 8 \
-  --nerf-depth-include-real \
-  --nerf-depth-include-nerf-samples \
-  --nerf-depth-max-steps 0 \
-  --nerf-depth-lambda 0.01 \
-  --nerf-depth-log-space \
-  --depth-warmup-steps 100 \
-  --depth-warmup-only-depth-loss \
-  --no-depth-warmup-disable-nerf-branch \
-  --nerf-depth-use-uncertainty-weights
+  --deterministic
+
+python utils/render_nerf_sample_views.py \
+  --ckpt /cluster/scratch/rbollati/flowers_models/RadSplat_dual_full_nores_l2_2/ckpts/best_ckpt_rank0.pt \
+  --data-dir /cluster/scratch/rbollati/dataset/flowers_sparse_aug \
+  --out-dir /cluster/scratch/rbollati/flowers_models/render_nerf_samples \
+  --num-views 40 \
+  --seed 42 \
+  --data-factor 1 \
+  --nerf-samples-data-factor 8 \
+  --save-side-by-side
