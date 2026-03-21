@@ -503,15 +503,8 @@ class Dataset:
         nerf_depth = np.zeros(image.shape[:2], dtype=np.float32)
         has_nerf_depth = False
 
-        # If nerf samples are loaded at a different factor than real images,
-        # scale intrinsics per sample so projections stay consistent.
+        # Reference size for Ks_dict[camera_id] (often undistorted/cropped size).
         base_w, base_h = self.parser.imsize_dict[camera_id]
-        img_h, img_w = image.shape[:2]
-        if img_w != base_w or img_h != base_h:
-            sx = img_w / float(base_w)
-            sy = img_h / float(base_h)
-            K[0, :] *= sx
-            K[1, :] *= sy
 
         sample_weight_dir = self.parser.nerf_weight_dir if is_nerf_sample else self.parser.weight_dir
         if is_nerf_sample and sample_weight_dir is not None:
@@ -586,6 +579,16 @@ class Dataset:
                 weight_map = weight_map[y : y + h, x : x + w]
                 if self.load_nerf_depths and has_nerf_depth:
                     nerf_depth = nerf_depth[y : y + h, x : x + w]
+
+        # Final intrinsics scaling to actual sample resolution.
+        # IMPORTANT: do this after optional undistort/crop, because Ks_dict already
+        # corresponds to the undistorted ROI size for distorted cameras.
+        img_h, img_w = image.shape[:2]
+        if img_w != base_w or img_h != base_h:
+            sx = img_w / float(base_w)
+            sy = img_h / float(base_h)
+            K[0, :] *= sx
+            K[1, :] *= sy
 
         if self.patch_size is not None:
             # Random crop.
