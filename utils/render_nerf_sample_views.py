@@ -74,7 +74,13 @@ def _write_split_manifest(path: Path, split_name: str, indices, runner: Runner):
 
 
 def _to_uint8(img: np.ndarray) -> np.ndarray:
-    return (np.clip(img, 0.0, 1.0) * 255.0).astype(np.uint8)
+    arr = np.asarray(img)
+    if arr.dtype == np.uint8:
+        return arr
+    # Dataset samples are often float in [0, 255], while renders are float in [0, 1].
+    if float(np.nanmax(arr)) > 1.5:
+        return np.clip(arr, 0.0, 255.0).astype(np.uint8)
+    return (np.clip(arr, 0.0, 1.0) * 255.0).astype(np.uint8)
 
 
 def _render_indices(

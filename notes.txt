@@ -562,7 +562,7 @@ python utils/plot_gsplat_eval_stats.py \
   --run-dir /cluster/scratch/rbollati/flowers_models/RadSplat_dual_full_nores_l2_1 \
   --run-dir /cluster/scratch/rbollati/flowers_models/RadSplat_dual_full_nores_l2_2 \
   --label gsplat-l2 \
-  --label radsplat-dual-l2 \
+  --label radsplat-dual-l2-3 \
   --label radsplat-dual-l2-2 \
   --out-dir /cluster/scratch/rbollati/plots \
   --plot-style lines
@@ -748,7 +748,7 @@ python run_gsplat_dual.py default \
   --no-nerf-init \
   --pt-path /cluster/scratch/rbollati/flowers_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/ray_sample.pt \
   --data-dir /cluster/scratch/rbollati/dataset/flowers_sparse_aug \
-  --result-dir /cluster/scratch/rbollati/flowers_models/RadSplat_dual_full_nores_l2_2 \
+  --result-dir /cluster/scratch/rbollati/flowers_models/RadSplat_dual_full_nores_l2_1 \
   --data-factor 1 \
   --nerf-samples-data-factor 8 \
   --batch-size 1 \
@@ -775,4 +775,17 @@ python ~/RadSplat/RadSplat/utils/check_export_convention.py \
   --nerf-config /cluster/scratch/rbollati/flowers_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/config.yml \
   --dataset /cluster/scratch/rbollati/dataset/flowers_sparse \
   --max-images 200
+
+
+PYTHONPATH=/cluster/home/rbollati/RadSplat/RadSplat python /cluster/home/rbollati/RadSplat/RadSplat/utils/render_nerf_sample_views.py \
+  --ckpt /cluster/scratch/rbollati/flowers_models/RadSplat_dual_full_nores_l2_2/ckpts/best_ckpt_rank0.pt \
+  --data-dir /cluster/scratch/rbollati/dataset/flowers_sparse_aug \
+  --sample-pt /cluster/scratch/rbollati/flowers_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/ray_sample.pt \
+  --out-dir /cluster/scratch/rbollati/flowers_models/RadSplat_dual_full_nores_l2_2/images \
+  --data-factor 8 \
+  --nerf-samples-data-factor 8 \
+  --max-train-views 40 \
+  --max-val-views 3 \
+  --save-side-by-side
+
 
