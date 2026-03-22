@@ -642,7 +642,7 @@ class RunnerDual(Runner):
                         depth_supervision_loss.item(),
                         step,
                     )
-                if cfg.tb_save_image and real_colors is not None and real_pixels is not None:
+                if cfg.tb_save_image and step <= 500 and real_colors is not None and real_pixels is not None:
                     canvas = torch.cat([real_pixels, real_colors], dim=2).detach().cpu().numpy()
                     canvas = canvas.reshape(-1, *canvas.shape[2:])
                     self.writer.add_image("train/render", canvas, step)
@@ -727,14 +727,15 @@ class RunnerDual(Runner):
             if do_eval:
                 eval_stats = self.eval_allstats()
                 if world_rank == 0:
-                    if real_colors is not None and real_pixels is not None:
+                    save_debug_loss_views = step <= 500
+                    if save_debug_loss_views and real_colors is not None and real_pixels is not None:
                         self._save_real_loss_views(
                             step=step,
                             effective_step=effective_step,
                             real_pixels=real_pixels,
                             real_colors=real_colors,
                         )
-                    if nerf_colors is not None and nerf_pixels is not None:
+                    if save_debug_loss_views and nerf_colors is not None and nerf_pixels is not None:
                         self._save_random_nerf_loss_view(
                             step=step,
                             effective_step=effective_step,
