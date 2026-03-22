@@ -789,3 +789,15 @@ PYTHONPATH=/cluster/home/rbollati/RadSplat/RadSplat python /cluster/home/rbollat
   --save-side-by-side
 
 
+
+python utils/render_nerf_sample_views.py \
+  --ckpt /cluster/scratch/rbollati/flowers_models/RadSplat_dual_full_nores_l2_2/ckpts/best_ckpt_rank0.pt \
+  --data-dir /cluster/scratch/rbollati/dataset/flowers_sparse_aug \
+  --out-dir /cluster/scratch/rbollati/flowers_models/RadSplat_dual_full_nores_l2_2 \
+  --sample-pt /cluster/scratch/rbollati/flowers_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/ray_sample.pt \
+  --data-factor 1 \
+  --nerf-samples-data-factor 8 \
+  --max-train-views 20 \
+  --max-val-views 5 \
+  --save-side-by-side
+

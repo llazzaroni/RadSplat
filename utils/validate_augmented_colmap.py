@@ -72,6 +72,10 @@ def main() -> None:
     for im in syn:
         cam_hist[im.camera_id] = cam_hist.get(im.camera_id, 0) + 1
     print("synthetic camera_id histogram:", cam_hist)
+    real_cam_hist = {}
+    for im in real:
+        real_cam_hist[im.camera_id] = real_cam_hist.get(im.camera_id, 0) + 1
+    print("real camera_id histogram:", real_cam_hist)
 
     # Dimension checks at requested factor
     image_dir = root / ("images" if args.factor == 1 else f"images_{args.factor}")
@@ -155,6 +159,11 @@ def main() -> None:
     problems = []
     if bad_size > 0:
         problems.append("camera/image size mismatch for synthetic samples")
+    if len(real_cam_hist) > 1 and len(cam_hist) == 1:
+        problems.append(
+            "real images use multiple camera IDs but synthetic samples use only one "
+            "(possible intrinsics mismatch)"
+        )
     if percentile(rel, 90) > 3.0:
         problems.append("synthetic camera centers far from real camera manifold (possible frame/scale mismatch)")
     if percentile(ang, 90) > 60.0:

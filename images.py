@@ -647,10 +647,23 @@ def load_colmap_model(colmap_dir):
 def append_nerf_images_to_colmap(
     colmap_dir,
     new_c2w,
+    camera_id=None,
 ):
     cameras, images, points3D = load_colmap_model(colmap_dir)
 
-    base_camera_id = list(cameras.keys())[0]
+    if camera_id is None:
+        if len(cameras) != 1:
+            raise ValueError(
+                "append_nerf_images_to_colmap() needs an explicit camera_id when the "
+                f"COLMAP model has multiple cameras. Found camera IDs: {sorted(cameras.keys())}"
+            )
+        base_camera_id = next(iter(cameras.keys()))
+    else:
+        if camera_id not in cameras:
+            raise ValueError(
+                f"Requested camera_id={camera_id} not present in COLMAP cameras: {sorted(cameras.keys())}"
+            )
+        base_camera_id = camera_id
     next_image_id = max(images.keys()) + 1
 
     for i in range(new_c2w.shape[0]):
