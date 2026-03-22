@@ -1,14 +1,29 @@
 #!/usr/bin/env python3
 """Render a subset of nerf_sample_* views from a dataset using a GS checkpoint."""
 
+import sys
+from pathlib import Path
+
+_THIS_FILE = Path(__file__).resolve()
+_REPO_ROOT = _THIS_FILE.parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+
 import argparse
 import os
 import random
 from pathlib import Path
+import sys
 
 import imageio.v2 as imageio
 import numpy as np
 import torch
+
+_THIS_FILE = Path(__file__).resolve()
+_REPO_ROOT = _THIS_FILE.parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
 from gsplat_dir.cfg import Config
 from gsplat_dir.runner import Runner
