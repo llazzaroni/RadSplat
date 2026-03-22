@@ -748,7 +748,7 @@ python run_gsplat_dual.py default \
   --no-nerf-init \
   --pt-path /cluster/scratch/rbollati/flowers_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/ray_sample.pt \
   --data-dir /cluster/scratch/rbollati/dataset/flowers_sparse_aug \
-  --result-dir /cluster/scratch/rbollati/flowers_models/RadSplat_dual_full_nores_l2_1 \
+  --result-dir /cluster/scratch/rbollati/flowers_models/RadSplat_dual_full_nores_l2_3 \
   --data-factor 1 \
   --nerf-samples-data-factor 8 \
   --batch-size 1 \

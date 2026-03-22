@@ -33,12 +33,12 @@ class RunnerDual(Runner):
         images = (images * 255.0).round().to(torch.uint8)
         return images.numpy()
 
-    def _save_real_loss_views(self, step: int, effective_step: int, real_pixels: torch.Tensor, real_colors: torch.Tensor):
-        out_dir = os.path.join(self.cfg.result_dir, "train_loss_views")
+    def _save_loss_views(self, folder_name: str, step: int, effective_step: int, pixels: torch.Tensor, colors: torch.Tensor):
+        out_dir = os.path.join(self.cfg.result_dir, folder_name)
         os.makedirs(out_dir, exist_ok=True)
 
-        gt_batch = self._to_uint8_image_batch(real_pixels)
-        pred_batch = self._to_uint8_image_batch(real_colors)
+        gt_batch = self._to_uint8_image_batch(pixels)
+        pred_batch = self._to_uint8_image_batch(colors)
 
         for batch_idx, (gt_img, pred_img) in enumerate(zip(gt_batch, pred_batch)):
             stem = f"step_{step:06d}_eff_{effective_step:06d}_b{batch_idx:02d}"
@@ -54,6 +54,27 @@ class RunnerDual(Runner):
                     dim=1,
                 ).numpy(),
             )
+
+    def _save_real_loss_views(self, step: int, effective_step: int, real_pixels: torch.Tensor, real_colors: torch.Tensor):
+        self._save_loss_views(
+            folder_name="train_loss_views",
+            step=step,
+            effective_step=effective_step,
+            pixels=real_pixels,
+            colors=real_colors,
+        )
+
+    def _save_random_nerf_loss_view(self, step: int, effective_step: int, nerf_pixels: torch.Tensor, nerf_colors: torch.Tensor):
+        if nerf_pixels.shape[0] == 0:
+            return
+        idx = int(torch.randint(low=0, high=nerf_pixels.shape[0], size=(1,)).item())
+        self._save_loss_views(
+            folder_name="nerf_loss_views",
+            step=step,
+            effective_step=effective_step,
+            pixels=nerf_pixels[idx : idx + 1],
+            colors=nerf_colors[idx : idx + 1],
+        )
 
     def _build_dual_subsets(self):
         real_items = []
@@ -359,6 +380,8 @@ class RunnerDual(Runner):
             nerf_info = None
             nerf_Ks = None
             nerf_depth_pred = None
+            nerf_colors = None
+            nerf_pixels = None
 
             if real_data is not None:
                 camtoworlds = camtoworlds_gt = real_data["camtoworld"].to(device)
@@ -521,6 +544,8 @@ class RunnerDual(Runner):
 
                 nerf_info = info
                 nerf_Ks = Ks
+                nerf_colors = colors
+                nerf_pixels = pixels
 
             info_main = real_info if real_info is not None else nerf_info
             Ks_main = real_Ks if real_Ks is not None else nerf_Ks
@@ -708,6 +733,13 @@ class RunnerDual(Runner):
                             effective_step=effective_step,
                             real_pixels=real_pixels,
                             real_colors=real_colors,
+                        )
+                    if nerf_colors is not None and nerf_pixels is not None:
+                        self._save_random_nerf_loss_view(
+                            step=step,
+                            effective_step=effective_step,
+                            nerf_pixels=nerf_pixels,
+                            nerf_colors=nerf_colors,
                         )
                     # Combined lower-is-better validation score:
                     # (10^(-PSNR/10) * sqrt(1-SSIM) * LPIPS)^(1/3)
