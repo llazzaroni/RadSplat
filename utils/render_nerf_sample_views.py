@@ -69,7 +69,11 @@ def _load_base_cfg(ckpt_path: Path) -> Config:
     if not cfg_path.is_file():
         return cfg
 
-    payload = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+    text = cfg_path.read_text(encoding="utf-8")
+    try:
+        payload = yaml.safe_load(text) or {}
+    except yaml.YAMLError:
+        payload = yaml.full_load(text) or {}
     allowed = set(Config.__dataclass_fields__.keys())
     for key, value in payload.items():
         if key in allowed and key != "strategy":
