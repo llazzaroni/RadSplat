@@ -115,9 +115,20 @@ def main():
     for i, idx in enumerate(indices, start=1):
         name = runner.parser.image_names[idx]
         camera_id = runner.parser.camera_ids[idx]
-        K = torch.from_numpy(runner.parser.Ks_dict[camera_id]).float().to(runner.device)[None]
+        gt_path = runner.parser.image_paths_nerf[idx]
+        gt_u8 = imageio.imread(gt_path)[..., :3]
+        gt_h, gt_w = gt_u8.shape[:2]
+
+        K_np = runner.parser.Ks_dict[camera_id].copy()
+        base_w, base_h = runner.parser.imsize_dict[camera_id]
+        sx = gt_w / float(base_w)
+        sy = gt_h / float(base_h)
+        K_np[0, :] *= sx
+        K_np[1, :] *= sy
+
+        K = torch.from_numpy(K_np).float().to(runner.device)[None]
         c2w = torch.from_numpy(runner.parser.camtoworlds[idx]).float().to(runner.device)[None]
-        width, height = runner.parser.imsize_dict[camera_id]
+        width, height = gt_w, gt_h
 
         renders, _, _ = runner.rasterize_splats(
             camtoworlds=c2w,
@@ -137,8 +148,6 @@ def main():
         imageio.imwrite(out_render / f"{stem}_pred.png", pred_u8)
 
         if args.save_side_by_side:
-            gt_path = runner.parser.image_paths_nerf[idx]
-            gt_u8 = imageio.imread(gt_path)[..., :3]
             if gt_u8.shape[:2] != pred_u8.shape[:2]:
                 print(f"[warn] skipped side-by-side for {name}: shape mismatch gt={gt_u8.shape} pred={pred_u8.shape}")
             else:
