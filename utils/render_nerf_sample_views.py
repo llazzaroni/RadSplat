@@ -23,8 +23,15 @@ if str(_REPO_ROOT) not in sys.path:
 
 from gsplat_dir.cfg import Config
 from gsplat_dir.runner import Runner
-from gsplat_dir.runner import slice as bilateral_slice
 from submodules.gsplat.gsplat.strategy import DefaultStrategy
+
+try:
+    from fused_bilagrid import slice as bilateral_slice
+except Exception:
+    try:
+        from lib_bilagrid import slice as bilateral_slice
+    except Exception:
+        bilateral_slice = None
 
 
 def _to_uint8(img: np.ndarray) -> np.ndarray:
