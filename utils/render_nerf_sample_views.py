@@ -73,7 +73,7 @@ def _load_base_cfg(ckpt_path: Path) -> Config:
     try:
         payload = yaml.safe_load(text) or {}
     except yaml.YAMLError:
-        payload = yaml.full_load(text) or {}
+        payload = yaml.unsafe_load(text) or {}
     allowed = set(Config.__dataclass_fields__.keys())
     for key, value in payload.items():
         if key in allowed and key != "strategy":
