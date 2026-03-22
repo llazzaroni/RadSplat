@@ -3,6 +3,7 @@ import math
 import os
 import time
 
+import imageio.v2 as imageio
 import torch
 import torch.nn.functional as F
 import tqdm
@@ -25,6 +26,34 @@ except Exception:
 
 class RunnerDual(Runner):
     """Runner with separate loaders for real images and nerf samples."""
+
+    @staticmethod
+    def _to_uint8_image_batch(images: torch.Tensor):
+        images = torch.clamp(images.detach().cpu(), 0.0, 1.0)
+        images = (images * 255.0).round().to(torch.uint8)
+        return images.numpy()
+
+    def _save_real_loss_views(self, step: int, effective_step: int, real_pixels: torch.Tensor, real_colors: torch.Tensor):
+        out_dir = os.path.join(self.cfg.result_dir, "train_loss_views")
+        os.makedirs(out_dir, exist_ok=True)
+
+        gt_batch = self._to_uint8_image_batch(real_pixels)
+        pred_batch = self._to_uint8_image_batch(real_colors)
+
+        for batch_idx, (gt_img, pred_img) in enumerate(zip(gt_batch, pred_batch)):
+            stem = f"step_{step:06d}_eff_{effective_step:06d}_b{batch_idx:02d}"
+            imageio.imwrite(os.path.join(out_dir, f"{stem}_gt.png"), gt_img)
+            imageio.imwrite(os.path.join(out_dir, f"{stem}_pred.png"), pred_img)
+            imageio.imwrite(
+                os.path.join(out_dir, f"{stem}_gt_pred.png"),
+                torch.cat(
+                    [
+                        torch.from_numpy(gt_img),
+                        torch.from_numpy(pred_img),
+                    ],
+                    dim=1,
+                ).numpy(),
+            )
 
     def _build_dual_subsets(self):
         real_items = []
@@ -673,6 +702,13 @@ class RunnerDual(Runner):
             if do_eval:
                 eval_stats = self.eval_allstats()
                 if world_rank == 0:
+                    if real_colors is not None and real_pixels is not None:
+                        self._save_real_loss_views(
+                            step=step,
+                            effective_step=effective_step,
+                            real_pixels=real_pixels,
+                            real_colors=real_colors,
+                        )
                     # Combined lower-is-better validation score:
                     # (10^(-PSNR/10) * sqrt(1-SSIM) * LPIPS)^(1/3)
                     if all(k in eval_stats for k in ("psnr", "ssim", "lpips")):
