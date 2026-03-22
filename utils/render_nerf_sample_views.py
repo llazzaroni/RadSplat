@@ -170,7 +170,11 @@ def _render_one(runner: Runner, sample: dict, sample_split: str) -> np.ndarray:
     gt_u8 = _to_uint8(gt)
     height, width = gt_u8.shape[:2]
 
-    image_ids = sample["image_id"].to(runner.device)[None]
+    image_id_value = sample["image_id"]
+    if isinstance(image_id_value, torch.Tensor):
+        image_ids = image_id_value.to(runner.device).reshape(1)
+    else:
+        image_ids = torch.tensor([int(image_id_value)], device=runner.device, dtype=torch.long)
     K = sample["K"].to(runner.device)[None]
     c2w = sample["camtoworld"].to(runner.device)[None]
     masks = sample["mask"].to(runner.device)[None] if "mask" in sample else None
