@@ -783,3 +783,9 @@ python run_gsplat_dual.py default \
   --dual-nerf-loss-weight 0 \
   --deterministic \
   --disable-viewer
+
+python RadSplat/utils/prepare_vggt_dataset.py \
+  --src /cluster/scratch/rbollati/dataset/bicycle \
+  --dst /cluster/scratch/rbollati/dataset/bicycle_vggt \
+  --overwrite
+
