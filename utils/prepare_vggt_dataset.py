@@ -32,7 +32,10 @@ import shutil
 import sys
 from pathlib import Path
 
+import numpy as np
 from PIL import Image
+import torch
+import torch.nn.functional as F
 
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp"}
@@ -97,6 +100,97 @@ def _write_multiscale_images(src_root: Path, rel_paths: list[Path], dst: Path) -
             print(f"[prepare-vggt-dataset] copied {idx}/{len(rel_paths)} images")
 
 
+def _resize_depth(depth_hw: torch.Tensor, out_h: int, out_w: int) -> torch.Tensor:
+    src_h, src_w = depth_hw.shape
+    if src_h == out_h and src_w == out_w:
+        return depth_hw
+    return F.interpolate(
+        depth_hw.unsqueeze(0).unsqueeze(0),
+        size=(out_h, out_w),
+        mode="bilinear",
+        align_corners=False,
+    )[0, 0]
+
+
+def _crop_vggt_depth_to_original(depth_hw: torch.Tensor, width: int, height: int) -> torch.Tensor:
+    target_size = int(depth_hw.shape[0])
+    max_dim = max(width, height)
+    left = (max_dim - width) // 2
+    top = (max_dim - height) // 2
+    scale = float(target_size) / float(max_dim)
+    x1 = left * scale
+    y1 = top * scale
+    x2 = (left + width) * scale
+    y2 = (top + height) * scale
+
+    x1i = max(0, min(target_size - 1, int(np.floor(x1))))
+    y1i = max(0, min(target_size - 1, int(np.floor(y1))))
+    x2i = max(x1i + 1, min(target_size, int(np.ceil(x2))))
+    y2i = max(y1i + 1, min(target_size, int(np.ceil(y2))))
+    cropped = depth_hw[y1i:y2i, x1i:x2i]
+    return _resize_depth(cropped, out_h=height, out_w=width)
+
+
+def _run_vggt_depth_export(
+    scene_dir: Path,
+    rel_paths: list[Path],
+    output_prefix: str,
+) -> None:
+    _bootstrap_imports()
+    from demo_colmap import run_VGGT
+    from vggt.models.vggt import VGGT
+    from vggt.utils.load_fn import load_and_preprocess_images_square
+
+    dtype = torch.bfloat16 if torch.cuda.get_device_capability()[0] >= 8 else torch.float16
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    if device != "cuda":
+        raise RuntimeError("VGGT depth export currently expects CUDA.")
+
+    model = VGGT()
+    url = "https://huggingface.co/facebook/VGGT-1B/resolve/main/model.pt"
+    model.load_state_dict(torch.hub.load_state_dict_from_url(url))
+    model.eval()
+    model = model.to(device)
+
+    image_paths = [str(scene_dir / "images" / rel) for rel in rel_paths]
+    img_load_resolution = 1024
+    vggt_fixed_resolution = 518
+    images, _ = load_and_preprocess_images_square(image_paths, img_load_resolution)
+    images = images.to(device)
+
+    _, _, depth_map, _ = run_VGGT(model, images, dtype, vggt_fixed_resolution)
+    depth_map_t = torch.from_numpy(depth_map).float()
+
+    depth_dirs = {
+        1: scene_dir / output_prefix,
+        2: scene_dir / f"{output_prefix}_2",
+        4: scene_dir / f"{output_prefix}_4",
+        8: scene_dir / f"{output_prefix}_8",
+    }
+    for d in depth_dirs.values():
+        d.mkdir(parents=True, exist_ok=True)
+
+    for idx, rel in enumerate(rel_paths, start=1):
+        with Image.open(scene_dir / "images" / rel) as img:
+            full_w, full_h = img.size
+        depth_full = _crop_vggt_depth_to_original(depth_map_t[idx - 1], full_w, full_h)
+
+        for factor, out_dir in depth_dirs.items():
+            img_dir = scene_dir / ("images" if factor == 1 else f"images_{factor}")
+            img_path = img_dir / rel
+            if not img_path.exists():
+                continue
+            with Image.open(img_path) as img_scaled:
+                out_w, out_h = img_scaled.size
+            depth_scaled = _resize_depth(depth_full, out_h=out_h, out_w=out_w)
+            out_path = (out_dir / rel).with_suffix(".npy")
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            np.save(out_path, depth_scaled.cpu().numpy().astype(np.float32))
+
+        if idx % 25 == 0 or idx == len(rel_paths):
+            print(f"[prepare-vggt-dataset] wrote depths {idx}/{len(rel_paths)}")
+
+
 def _run_vggt_reconstruction(
     scene_dir: Path,
     seed: int,
@@ -138,6 +232,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--recursive", action="store_true", help="Recursively scan the input for images.")
     parser.add_argument("--overwrite", action="store_true", help="Delete dst if it already exists.")
     parser.add_argument("--seed", type=int, default=42, help="Random seed passed to VGGT.")
+    parser.add_argument(
+        "--output-depth-prefix",
+        default="depths_vggt",
+        help="Depth output folder prefix under dst: prefix[, _2, _4, _8].",
+    )
     parser.add_argument("--use-ba", action="store_true", help="Enable bundle adjustment in VGGT COLMAP export.")
     parser.add_argument("--shared-camera", action="store_true", help="Use a shared camera during BA mode.")
     parser.add_argument("--camera-type", default="SIMPLE_PINHOLE", help="COLMAP camera type used in BA mode.")
@@ -178,6 +277,12 @@ def main() -> None:
         fine_tracking=args.fine_tracking,
         max_reproj_error=args.max_reproj_error,
         conf_thres_value=args.conf_thres_value,
+    )
+    print("[prepare-vggt-dataset] exporting VGGT depth maps")
+    _run_vggt_depth_export(
+        scene_dir=dst,
+        rel_paths=rel_paths,
+        output_prefix=args.output_depth_prefix,
     )
     print(f"[prepare-vggt-dataset] done: {dst}")
 
