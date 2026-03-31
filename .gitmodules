@@ -4,3 +4,6 @@
 [submodule "submodules/gsplat"]
 	path = submodules/gsplat
 	url = https://github.com/nerfstudio-project/gsplat.git
+[submodule "submodules/vggt"]
+	path = submodules/vggt
+	url = https://github.com/facebookresearch/vggt.git
