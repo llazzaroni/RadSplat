@@ -784,8 +784,7 @@ python run_gsplat_dual.py default \
   --deterministic \
   --disable-viewer
 
-python RadSplat/utils/prepare_vggt_dataset.py \
-  --src /cluster/scratch/rbollati/dataset/bicycle \
-  --dst /cluster/scratch/rbollati/dataset/bicycle_vggt \
+python utils/prepare_vggt_dataset.py \
+  --src /cluster/scratch/rbollati/dataset/bicycle_sparse_vggt \
+  --dst /cluster/scratch/rbollati/dataset/bicycle_sparse_vggt_colmap \
   --overwrite
-

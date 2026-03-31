@@ -30,6 +30,7 @@ Output:
 import argparse
 import shutil
 import sys
+import time
 from pathlib import Path
 
 import numpy as np
@@ -40,6 +41,11 @@ import torch.nn.functional as F
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp"}
 SCALES = (1, 2, 4, 8)
+
+
+def _log(msg: str) -> None:
+    now = time.strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[prepare-vggt-dataset {now}] {msg}", flush=True)
 
 
 def _repo_root() -> Path:
@@ -97,7 +103,7 @@ def _write_multiscale_images(src_root: Path, rel_paths: list[Path], dst: Path) -
                     w, h = _resized_dimensions(img.width, img.height, factor)
                     img.resize((w, h), resample=Image.Resampling.LANCZOS).save(out_path)
         if idx % 25 == 0 or idx == len(rel_paths):
-            print(f"[prepare-vggt-dataset] copied {idx}/{len(rel_paths)} images")
+            _log(f"copied {idx}/{len(rel_paths)} images")
 
 
 def _resize_depth(depth_hw: torch.Tensor, out_h: int, out_w: int) -> torch.Tensor:
@@ -137,6 +143,7 @@ def _run_vggt_depth_export(
     output_prefix: str,
 ) -> None:
     _bootstrap_imports()
+    _log("imported VGGT depth-export modules")
     from demo_colmap import run_VGGT
     from vggt.models.vggt import VGGT
     from vggt.utils.load_fn import load_and_preprocess_images_square
@@ -145,21 +152,27 @@ def _run_vggt_depth_export(
     device = "cuda" if torch.cuda.is_available() else "cpu"
     if device != "cuda":
         raise RuntimeError("VGGT depth export currently expects CUDA.")
+    _log(f"starting depth export on device={device} dtype={dtype}")
 
     model = VGGT()
     url = "https://huggingface.co/facebook/VGGT-1B/resolve/main/model.pt"
+    _log("loading VGGT weights for depth export")
     model.load_state_dict(torch.hub.load_state_dict_from_url(url))
     model.eval()
     model = model.to(device)
+    _log("VGGT weights loaded for depth export")
 
     image_paths = [str(scene_dir / "images" / rel) for rel in rel_paths]
     img_load_resolution = 1024
     vggt_fixed_resolution = 518
+    _log(f"loading and preprocessing {len(image_paths)} images for depth export")
     images, _ = load_and_preprocess_images_square(image_paths, img_load_resolution)
     images = images.to(device)
+    _log("running VGGT forward pass for depth export")
 
     _, _, depth_map, _ = run_VGGT(model, images, dtype, vggt_fixed_resolution)
     depth_map_t = torch.from_numpy(depth_map).float()
+    _log("VGGT forward pass completed for depth export")
 
     depth_dirs = {
         1: scene_dir / output_prefix,
@@ -188,7 +201,7 @@ def _run_vggt_depth_export(
             np.save(out_path, depth_scaled.cpu().numpy().astype(np.float32))
 
         if idx % 25 == 0 or idx == len(rel_paths):
-            print(f"[prepare-vggt-dataset] wrote depths {idx}/{len(rel_paths)}")
+            _log(f"wrote depths {idx}/{len(rel_paths)}")
 
 
 def _run_vggt_reconstruction(
@@ -205,7 +218,9 @@ def _run_vggt_reconstruction(
     conf_thres_value: float,
 ) -> None:
     _bootstrap_imports()
+    _log("importing VGGT reconstruction entrypoint")
     from demo_colmap import demo_fn
+    _log("VGGT reconstruction entrypoint imported")
 
     class Args:
         pass
@@ -222,7 +237,9 @@ def _run_vggt_reconstruction(
     args.max_query_pts = max_query_pts
     args.fine_tracking = fine_tracking
     args.conf_thres_value = conf_thres_value
+    _log("starting VGGT reconstruction")
     demo_fn(args)
+    _log("VGGT reconstruction completed")
 
 
 def parse_args() -> argparse.Namespace:
@@ -258,13 +275,15 @@ def main() -> None:
     args = parse_args()
     src = args.src.resolve()
     dst = args.dst.resolve()
+    _log(f"src={src}")
+    _log(f"dst={dst}")
     _ensure_empty_or_new(dst, overwrite=args.overwrite)
 
     src_root, rel_paths = _list_source_images(src, recursive=args.recursive)
-    print(f"[prepare-vggt-dataset] found {len(rel_paths)} source images under {src_root}")
+    _log(f"found {len(rel_paths)} source images under {src_root}")
     _write_multiscale_images(src_root, rel_paths, dst)
 
-    print("[prepare-vggt-dataset] running VGGT COLMAP export")
+    _log("running VGGT COLMAP export")
     _run_vggt_reconstruction(
         scene_dir=dst,
         seed=args.seed,
@@ -278,13 +297,13 @@ def main() -> None:
         max_reproj_error=args.max_reproj_error,
         conf_thres_value=args.conf_thres_value,
     )
-    print("[prepare-vggt-dataset] exporting VGGT depth maps")
+    _log("exporting VGGT depth maps")
     _run_vggt_depth_export(
         scene_dir=dst,
         rel_paths=rel_paths,
         output_prefix=args.output_depth_prefix,
     )
-    print(f"[prepare-vggt-dataset] done: {dst}")
+    _log(f"done: {dst}")
 
 
 if __name__ == "__main__":
