@@ -1,6 +1,6 @@
 1) step: build a subset of the dataset:
-FULL=/cluster/scratch/rbollati/dataset/bicycle
-SUB=/cluster/scratch/rbollati/dataset/bicycle_sparse
+FULL=/cluster/scratch/rbollati/dataset/treehill
+SUB=/cluster/scratch/rbollati/dataset/treehill_sparse
 N=30
 SEED=42
 
@@ -558,10 +558,10 @@ python utils/rank_gsplat_combo.py \
 
 
 python utils/plot_gsplat_eval_stats.py \
-  --run-dir /cluster/scratch/rbollati/flowers_models/gsplat_sfm_l2_nores \
-  --run-dir /cluster/scratch/rbollati/flowers_models/RadSplat_dual_full_nores_l2_4 \
+  --run-dir /cluster/scratch/rbollati/flowers_models/gsplat_sfm_l2_nores_2 \
+  --run-dir /cluster/scratch/rbollati/flowers_models/RadSplat_staged_full_nores_l2_2 \
   --label gsplat-l2 \
-  --label radsplat-dual-l2 \
+  --label radsplat-staged-l2 \
   --out-dir /cluster/scratch/rbollati/plots \
   --plot-style lines
 
@@ -631,19 +631,26 @@ python run_gsplat_dual.py default \
 
 python run_gsplat_staged.py default \
   --no-nerf-init \
-  --pt-path /cluster/scratch/rbollati/counter_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/ray_sample.pt \
-  --data-dir /cluster/scratch/rbollati/dataset/counter_sparse_aug \
-  --result-dir /cluster/scratch/rbollati/counter_models/RadSplat_staged_full_nores_l1_4 \
+  --pt-path /cluster/scratch/rbollati/flowers_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/ray_sample.pt \
+  --data-dir /cluster/scratch/rbollati/dataset/flowers_sparse_aug \
+  --result-dir /cluster/scratch/rbollati/flowers_models/RadSplat_staged_full_nores_l2_2 \
   --data-factor 1 \
   --nerf-samples-data-factor 8 \
   --batch-size 1 \
   --nerf-batch-factor 20 \
-  --use-l1-for-real-samples \
-  --staged-nerf-phase-steps 100 \
-  --staged-real-phase-steps 30000 \
+  --staged-nerf-phase-steps 500 \
+  --staged-real-phase-steps 20000 \
   --strategy.reset-every 100000000 \
   --staged-include-real-in-nerf-phase \
   --deterministic
+
+python ~/RadSplat/RadSplat/utils/generate_nerf_depth_maps.py \
+  --nerf-folder /cluster/scratch/rbollati/bicycle_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/nerf/config.yml \
+  --dataset /cluster/scratch/rbollati/dataset/bicycle_sparse_aug \
+  --camera-source dataset \
+  --output-prefix depths_nerf \
+  --overwrite \
+  --log-every 10
 
 python run_gsplat_staged_then_dual.py default \
   --no-nerf-init \
@@ -747,7 +754,7 @@ python run_gsplat_dual.py default \
   --no-nerf-init \
   --pt-path /cluster/scratch/rbollati/flowers_models/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/ray_sample.pt \
   --data-dir /cluster/scratch/rbollati/dataset/flowers_sparse_aug \
-  --result-dir /cluster/scratch/rbollati/flowers_models/RadSplat_dual_full_nores_l2_4 \
+  --result-dir /cluster/scratch/rbollati/flowers_models/RadSplat_dual_full_nores_l2_5 \
   --data-factor 1 \
   --nerf-samples-data-factor 8 \
   --batch-size 1 \

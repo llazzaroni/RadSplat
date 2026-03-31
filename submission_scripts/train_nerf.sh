@@ -41,7 +41,7 @@ for d in "$BASE_DIR"/nerf_ensemble_*; do
   ns-train nerfacto \
     --vis tensorboard \
     --experiment-name ensemble_1 \
-    --timestamp flowers_try \
+    --timestamp nerf \
     --steps-per-eval-image 30000 \
     --max-num-iterations 30000 \
     --save-only-latest-checkpoint True \
@@ -49,6 +49,6 @@ for d in "$BASE_DIR"/nerf_ensemble_*; do
     --logging.profiler pytorch \
     colmap \
     --downscale-factor 1 \
-    --colmap-path /cluster/scratch/rbollati/dataset/flowers_sparse/sparse/0 \
-    --images-path /cluster/scratch/rbollati/dataset/flowers_sparse/images
+    --colmap-path /cluster/scratch/rbollati/dataset/{name of the folder in the outer loop}/sparse/0 \
+    --images-path /cluster/scratch/rbollati/dataset/{name of the folder in the outer loop}/images
 done

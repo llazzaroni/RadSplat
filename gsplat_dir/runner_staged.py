@@ -117,6 +117,13 @@ class RunnerStaged(Runner):
         max_steps = max(0, nerf_phase_steps) + max(0, real_phase_steps)
         if max_steps <= 0:
             raise RuntimeError("staged_nerf_phase_steps + staged_real_phase_steps must be > 0")
+        use_nerf_depth = bool(getattr(cfg, "use_nerf_depth_supervision", False))
+        nerf_depth_lambda = float(getattr(cfg, "nerf_depth_lambda", 0.0))
+        nerf_depth_max_steps = int(getattr(cfg, "nerf_depth_max_steps", -1))
+        nerf_depth_log_space = bool(getattr(cfg, "nerf_depth_log_space", True))
+        nerf_depth_use_uncertainty_weights = bool(
+            getattr(cfg, "nerf_depth_use_uncertainty_weights", True)
+        )
 
         if world_rank == 0:
             import yaml
@@ -138,13 +145,21 @@ class RunnerStaged(Runner):
                 f"[Staged] include real images in nerf phase: "
                 f"{bool(getattr(cfg, 'staged_include_real_in_nerf_phase', False))}"
             )
+            if use_nerf_depth:
+                print(
+                    f"[StagedDepth] enabled: lambda={nerf_depth_lambda}, "
+                    f"log_space={nerf_depth_log_space}, max_steps={nerf_depth_max_steps}, "
+                    f"use_uncertainty_weights={nerf_depth_use_uncertainty_weights}, "
+                    f"include_real={bool(getattr(cfg, 'nerf_depth_include_real', True))}, "
+                    f"include_nerf={bool(getattr(cfg, 'nerf_depth_include_nerf_samples', True))}"
+                )
 
         real_loader = None
         nerf_loader = None
         pretrain_loader = None
         if len(real_items) > 0:
-            # Post-pretraining real phase follows the same deterministic order as standard Runner.
-            real_gen = torch.Generator().manual_seed(self._loader_seed_base)
+            # Match RunnerDual real-image ordering exactly in the real phase.
+            real_gen = torch.Generator().manual_seed(self._loader_seed_base + 1)
             real_loader = DataLoader(
                 Subset(self.trainset, real_items),
                 batch_size=cfg.batch_size,
@@ -173,6 +188,11 @@ class RunnerStaged(Runner):
                 split="train",
                 patch_size=cfg.patch_size,
                 load_depths=False,
+                load_nerf_depths=cfg.use_nerf_depth_supervision,
+                nerf_depth_prefix=cfg.nerf_depth_prefix,
+                nerf_depth_factor=cfg.nerf_depth_data_factor,
+                nerf_depth_include_real=cfg.nerf_depth_include_real,
+                nerf_depth_include_nerf_samples=cfg.nerf_depth_include_nerf_samples,
                 use_nerf_factor_for_real=True,
             )
             pretrain_gen = torch.Generator().manual_seed(self._loader_seed_base + 2)
@@ -193,6 +213,58 @@ class RunnerStaged(Runner):
         real_use_l1 = bool(getattr(cfg, "use_l1_for_real_samples", False))
         schedulers = self._build_schedulers(max_steps)
         switched_to_real = False
+
+        def _depth_supervision_active(cur_step: int) -> bool:
+            if not use_nerf_depth:
+                return False
+            if nerf_depth_lambda <= 0.0:
+                return False
+            if nerf_depth_max_steps < 0:
+                return True
+            return cur_step < nerf_depth_max_steps
+
+        def _compute_nerf_depth_loss(pred_depth_hw, data_batch, subset_mask=None):
+            if pred_depth_hw is None or data_batch is None:
+                return torch.tensor(0.0, device=device)
+            if "nerf_depth" not in data_batch or "has_nerf_depth" not in data_batch:
+                return torch.tensor(0.0, device=device)
+            tgt = data_batch["nerf_depth"].to(device).float()
+            has = data_batch["has_nerf_depth"].to(device).bool()
+            if subset_mask is not None:
+                has = has & subset_mask.to(device).bool()
+            if pred_depth_hw.ndim == 4 and pred_depth_hw.shape[-1] == 1:
+                pred = pred_depth_hw[..., 0]
+            elif pred_depth_hw.ndim == 3:
+                pred = pred_depth_hw
+            else:
+                return torch.tensor(0.0, device=device)
+            if pred.shape != tgt.shape:
+                return torch.tensor(0.0, device=device)
+            eps = 1e-6
+            valid = (
+                has[:, None, None]
+                & torch.isfinite(tgt)
+                & torch.isfinite(pred)
+                & (tgt > 0.0)
+                & (pred > 0.0)
+            )
+            if not bool(valid.any().item()):
+                return torch.tensor(0.0, device=device)
+            if nerf_depth_log_space:
+                pred_map = torch.log(torch.clamp(pred, min=eps))
+                tgt_map = torch.log(torch.clamp(tgt, min=eps))
+            else:
+                pred_map = pred
+                tgt_map = tgt
+            err = torch.abs(pred_map - tgt_map)
+            if nerf_depth_use_uncertainty_weights and "weight_map" in data_batch:
+                w = torch.clamp(data_batch["weight_map"].to(device).float(), min=0.0)
+                if w.shape == err.shape:
+                    w = w * valid.float()
+                    wsum = w.sum()
+                    if bool((wsum > 0).item()):
+                        return (err * w).sum() / torch.clamp(wsum, min=eps)
+            return err[valid].mean()
 
         global_tic = time.time()
         pbar = tqdm.tqdm(range(max_steps))
@@ -256,6 +328,7 @@ class RunnerStaged(Runner):
 
             # Keep SH/strategy schedule tied to real-image phase progression.
             sh_degree_to_use = min(real_phase_step // cfg.sh_degree_interval, cfg.sh_degree)
+            depth_supervision_active = _depth_supervision_active(step)
             renders, alphas, info = self.rasterize_splats(
                 camtoworlds=camtoworlds,
                 Ks=Ks,
@@ -265,7 +338,11 @@ class RunnerStaged(Runner):
                 near_plane=cfg.near_plane,
                 far_plane=cfg.far_plane,
                 image_ids=image_ids,
-                render_mode="RGB+ED" if (cfg.depth_loss and (not in_nerf_phase)) else "RGB",
+                render_mode=(
+                    "RGB+ED"
+                    if ((cfg.depth_loss and (not in_nerf_phase)) or depth_supervision_active)
+                    else "RGB"
+                ),
                 masks=masks,
             )
             if renders.shape[-1] == 4:
@@ -301,6 +378,7 @@ class RunnerStaged(Runner):
                 )
 
             depthloss: Optional[torch.Tensor] = None
+            depth_supervision_loss = torch.tensor(0.0, device=device)
             if in_nerf_phase:
                 if pretrain_loader is None:
                     if not bool(is_nerf_sample.all().item()):
@@ -386,6 +464,18 @@ class RunnerStaged(Runner):
                     depthloss = F.l1_loss(disp, disp_gt) * self.scene_scale
                     loss += depthloss * cfg.depth_lambda
 
+            if depth_supervision_active:
+                depth_terms = []
+                if bool(getattr(cfg, "nerf_depth_include_real", True)):
+                    if bool((~is_nerf_sample).any().item()):
+                        depth_terms.append(_compute_nerf_depth_loss(depths, data, subset_mask=(~is_nerf_sample)))
+                if bool(getattr(cfg, "nerf_depth_include_nerf_samples", True)):
+                    if bool(is_nerf_sample.any().item()):
+                        depth_terms.append(_compute_nerf_depth_loss(depths, data, subset_mask=is_nerf_sample))
+                if len(depth_terms) > 0:
+                    depth_supervision_loss = torch.stack(depth_terms).mean()
+                    loss = loss + nerf_depth_lambda * depth_supervision_loss
+
             if cfg.use_bilateral_grid:
                 tvloss = 10 * total_variation_loss(self.bil_grids.grids)
                 loss += tvloss
@@ -399,6 +489,8 @@ class RunnerStaged(Runner):
             desc = f"loss={loss.item():.3f}| phase={'nerf' if in_nerf_phase else 'real'}| sh degree={sh_degree_to_use}| "
             if depthloss is not None:
                 desc += f"depth loss={depthloss.item():.6f}| "
+            if depth_supervision_active:
+                desc += f"nerf-depth={depth_supervision_loss.item():.6f}| "
             if cfg.pose_opt and cfg.pose_noise:
                 pose_err = F.l1_loss(camtoworlds_gt, camtoworlds)
                 desc += f"pose err={pose_err.item():.6f}| "
@@ -420,6 +512,10 @@ class RunnerStaged(Runner):
                 self.writer.add_scalar("train/mem", mem, step)
                 if depthloss is not None:
                     self.writer.add_scalar("train/depthloss", depthloss.item(), step)
+                if depth_supervision_active:
+                    self.writer.add_scalar(
+                        "train/nerf_depth_supervision_loss", depth_supervision_loss.item(), step
+                    )
                 if cfg.use_bilateral_grid:
                     self.writer.add_scalar("train/tvloss", tvloss.item(), step)
                 if cfg.tb_save_image:
