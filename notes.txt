@@ -789,102 +789,16 @@ python utils/prepare_vggt_dataset.py \
   --dst /cluster/scratch/rbollati/dataset/bicycle_sparse_vggt \
   --overwrite
 
-
-FULL=/cluster/scratch/rbollati/dataset/bicycle
-SUB=/cluster/scratch/rbollati/dataset/bicycle_sparse_1
-N=30
-SEED=42
-
-python ~/RadSplat/RadSplat/utils/sample_multiscale_dataset.py \
-  --src "$FULL" \
-  --dst "$SUB" \
-  --n "$N" \
-  --seed "$SEED"
-
-FULL=/cluster/scratch/rbollati/dataset/bonsai
-SUB=/cluster/scratch/rbollati/dataset/bonsai_sparse_1
-N=30
-SEED=42
-
-python ~/RadSplat/RadSplat/utils/sample_multiscale_dataset.py \
-  --src "$FULL" \
-  --dst "$SUB" \
-  --n "$N" \
-  --seed "$SEED"
-
-FULL=/cluster/scratch/rbollati/dataset/counter
-SUB=/cluster/scratch/rbollati/dataset/counter_sparse_1
-N=30
-SEED=42
-
-python ~/RadSplat/RadSplat/utils/sample_multiscale_dataset.py \
-  --src "$FULL" \
-  --dst "$SUB" \
-  --n "$N" \
-  --seed "$SEED"
-
-FULL=/cluster/scratch/rbollati/dataset/flowers
-SUB=/cluster/scratch/rbollati/dataset/flowers_sparse_1
-N=30
-SEED=42
-
-python ~/RadSplat/RadSplat/utils/sample_multiscale_dataset.py \
-  --src "$FULL" \
-  --dst "$SUB" \
-  --n "$N" \
-  --seed "$SEED"
-
-FULL=/cluster/scratch/rbollati/dataset/garden
-SUB=/cluster/scratch/rbollati/dataset/garden_sparse_1
-N=30
-SEED=42
-
-python ~/RadSplat/RadSplat/utils/sample_multiscale_dataset.py \
-  --src "$FULL" \
-  --dst "$SUB" \
-  --n "$N" \
-  --seed "$SEED"
-
-FULL=/cluster/scratch/rbollati/dataset/kitchen
-SUB=/cluster/scratch/rbollati/dataset/kitchen_sparse_1
-N=30
-SEED=42
-
-python ~/RadSplat/RadSplat/utils/sample_multiscale_dataset.py \
-  --src "$FULL" \
-  --dst "$SUB" \
-  --n "$N" \
-  --seed "$SEED"
-
-FULL=/cluster/scratch/rbollati/dataset/room
-SUB=/cluster/scratch/rbollati/dataset/room_sparse_1
-N=30
-SEED=42
-
-python ~/RadSplat/RadSplat/utils/sample_multiscale_dataset.py \
-  --src "$FULL" \
-  --dst "$SUB" \
-  --n "$N" \
-  --seed "$SEED"
-
-FULL=/cluster/scratch/rbollati/dataset/stump
-SUB=/cluster/scratch/rbollati/dataset/stump_sparse_1
-N=30
-SEED=42
-
-python ~/RadSplat/RadSplat/utils/sample_multiscale_dataset.py \
-  --src "$FULL" \
-  --dst "$SUB" \
-  --n "$N" \
-  --seed "$SEED"
-
-FULL=/cluster/scratch/rbollati/dataset/treehill
-SUB=/cluster/scratch/rbollati/dataset/treehill_sparse_1
-N=30
-SEED=42
-
-python ~/RadSplat/RadSplat/utils/sample_multiscale_dataset.py \
-  --src "$FULL" \
-  --dst "$SUB" \
-  --n "$N" \
-  --seed "$SEED"
+ns-train nerfacto \
+  --vis tensorboard \
+  --experiment-name ensemble_1 \
+  --timestamp flowers \
+  --steps-per-eval-image 30000 \
+  --max-num-iterations 30000 \
+  --save-only-latest-checkpoint True \
+  --logging.steps-per-log 100 \
+  --logging.profiler pytorch \
+  colmap \
+  --downscale-factor 1 \
+  --colmap-path /cluster/scratch/rbollati/dataset/bicycle_sparse_vggt/sparse/0 \
+  --images-path /cluster/scratch/rbollati/dataset/bicycle_sparse_vggt/images
