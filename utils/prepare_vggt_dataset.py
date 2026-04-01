@@ -106,7 +106,18 @@ def _write_multiscale_images(src_root: Path, rel_paths: list[Path], dst: Path) -
             _log(f"copied {idx}/{len(rel_paths)} images")
 
 
+def _ensure_depth_hw(depth: torch.Tensor) -> torch.Tensor:
+    if depth.ndim == 2:
+        return depth
+    if depth.ndim == 3 and depth.shape[-1] == 1:
+        return depth[..., 0]
+    if depth.ndim == 3 and depth.shape[0] == 1:
+        return depth[0]
+    raise ValueError(f"expected depth with shape (H, W), (H, W, 1), or (1, H, W); got {tuple(depth.shape)}")
+
+
 def _resize_depth(depth_hw: torch.Tensor, out_h: int, out_w: int) -> torch.Tensor:
+    depth_hw = _ensure_depth_hw(depth_hw)
     src_h, src_w = depth_hw.shape
     if src_h == out_h and src_w == out_w:
         return depth_hw
@@ -119,6 +130,7 @@ def _resize_depth(depth_hw: torch.Tensor, out_h: int, out_w: int) -> torch.Tenso
 
 
 def _crop_vggt_depth_to_original(depth_hw: torch.Tensor, width: int, height: int) -> torch.Tensor:
+    depth_hw = _ensure_depth_hw(depth_hw)
     target_size = int(depth_hw.shape[0])
     max_dim = max(width, height)
     left = (max_dim - width) // 2
@@ -141,6 +153,8 @@ def _run_vggt_depth_export(
     scene_dir: Path,
     rel_paths: list[Path],
     output_prefix: str,
+    img_load_resolution: int,
+    vggt_resolution: int,
 ) -> None:
     _bootstrap_imports()
     _log("imported VGGT depth-export modules")
@@ -163,8 +177,7 @@ def _run_vggt_depth_export(
     _log("VGGT weights loaded for depth export")
 
     image_paths = [str(scene_dir / "images" / rel) for rel in rel_paths]
-    img_load_resolution = 1024
-    vggt_fixed_resolution = 518
+    vggt_fixed_resolution = int(vggt_resolution)
     _log(f"loading and preprocessing {len(image_paths)} images for depth export")
     images, _ = load_and_preprocess_images_square(image_paths, img_load_resolution)
     images = images.to(device)
@@ -207,6 +220,8 @@ def _run_vggt_depth_export(
 def _run_vggt_reconstruction(
     scene_dir: Path,
     seed: int,
+    img_load_resolution: int,
+    vggt_resolution: int,
     use_ba: bool,
     shared_camera: bool,
     camera_type: str,
@@ -228,6 +243,8 @@ def _run_vggt_reconstruction(
     args = Args()
     args.scene_dir = str(scene_dir)
     args.seed = seed
+    args.img_load_resolution = int(img_load_resolution)
+    args.vggt_resolution = int(vggt_resolution)
     args.use_ba = use_ba
     args.max_reproj_error = max_reproj_error
     args.shared_camera = shared_camera
@@ -249,6 +266,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--recursive", action="store_true", help="Recursively scan the input for images.")
     parser.add_argument("--overwrite", action="store_true", help="Delete dst if it already exists.")
     parser.add_argument("--seed", type=int, default=42, help="Random seed passed to VGGT.")
+    parser.add_argument(
+        "--img-load-resolution",
+        type=int,
+        default=1024,
+        help="Square resolution used when loading/padding images before VGGT.",
+    )
+    parser.add_argument(
+        "--vggt-resolution",
+        type=int,
+        default=518,
+        help="Internal square resolution used for the VGGT forward pass.",
+    )
     parser.add_argument(
         "--output-depth-prefix",
         default="depths_vggt",
@@ -287,6 +316,8 @@ def main() -> None:
     _run_vggt_reconstruction(
         scene_dir=dst,
         seed=args.seed,
+        img_load_resolution=args.img_load_resolution,
+        vggt_resolution=args.vggt_resolution,
         use_ba=args.use_ba,
         shared_camera=args.shared_camera,
         camera_type=args.camera_type,
@@ -302,6 +333,8 @@ def main() -> None:
         scene_dir=dst,
         rel_paths=rel_paths,
         output_prefix=args.output_depth_prefix,
+        img_load_resolution=args.img_load_resolution,
+        vggt_resolution=args.vggt_resolution,
     )
     _log(f"done: {dst}")
 
