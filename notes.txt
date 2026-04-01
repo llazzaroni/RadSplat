@@ -785,6 +785,95 @@ python run_gsplat_dual.py default \
   --disable-viewer
 
 python utils/prepare_vggt_dataset.py \
-  --src /cluster/scratch/rbollati/dataset/bicycle_sparse_vggt \
-  --dst /cluster/scratch/rbollati/dataset/bicycle_sparse_vggt_colmap \
+  --src /cluster/scratch/rbollati/dataset/bicycle_sparse_1 \
+  --dst /cluster/scratch/rbollati/dataset/bicycle_sparse_vggt \
   --overwrite
+
+
+FULL=/cluster/scratch/rbollati/dataset/bonsai
+SUB=/cluster/scratch/rbollati/dataset/bonsai_sparse_1
+N=30
+SEED=42
+
+python ~/RadSplat/RadSplat/utils/sample_multiscale_dataset.py \
+  --src "$FULL" \
+  --dst "$SUB" \
+  --n "$N" \
+  --seed "$SEED"
+
+FULL=/cluster/scratch/rbollati/dataset/counter
+SUB=/cluster/scratch/rbollati/dataset/counter_sparse_1
+N=30
+SEED=42
+
+python ~/RadSplat/RadSplat/utils/sample_multiscale_dataset.py \
+  --src "$FULL" \
+  --dst "$SUB" \
+  --n "$N" \
+  --seed "$SEED"
+
+FULL=/cluster/scratch/rbollati/dataset/flowers
+SUB=/cluster/scratch/rbollati/dataset/flowers_sparse_1
+N=30
+SEED=42
+
+python ~/RadSplat/RadSplat/utils/sample_multiscale_dataset.py \
+  --src "$FULL" \
+  --dst "$SUB" \
+  --n "$N" \
+  --seed "$SEED"
+
+FULL=/cluster/scratch/rbollati/dataset/garden
+SUB=/cluster/scratch/rbollati/dataset/garden_sparse_1
+N=30
+SEED=42
+
+python ~/RadSplat/RadSplat/utils/sample_multiscale_dataset.py \
+  --src "$FULL" \
+  --dst "$SUB" \
+  --n "$N" \
+  --seed "$SEED"
+
+FULL=/cluster/scratch/rbollati/dataset/kitchen
+SUB=/cluster/scratch/rbollati/dataset/kitchen_sparse_1
+N=30
+SEED=42
+
+python ~/RadSplat/RadSplat/utils/sample_multiscale_dataset.py \
+  --src "$FULL" \
+  --dst "$SUB" \
+  --n "$N" \
+  --seed "$SEED"
+
+FULL=/cluster/scratch/rbollati/dataset/room
+SUB=/cluster/scratch/rbollati/dataset/room_sparse_1
+N=30
+SEED=42
+
+python ~/RadSplat/RadSplat/utils/sample_multiscale_dataset.py \
+  --src "$FULL" \
+  --dst "$SUB" \
+  --n "$N" \
+  --seed "$SEED"
+
+FULL=/cluster/scratch/rbollati/dataset/stump
+SUB=/cluster/scratch/rbollati/dataset/stump_sparse_1
+N=30
+SEED=42
+
+python ~/RadSplat/RadSplat/utils/sample_multiscale_dataset.py \
+  --src "$FULL" \
+  --dst "$SUB" \
+  --n "$N" \
+  --seed "$SEED"
+
+FULL=/cluster/scratch/rbollati/dataset/treehill
+SUB=/cluster/scratch/rbollati/dataset/treehill_sparse_1
+N=30
+SEED=42
+
+python ~/RadSplat/RadSplat/utils/sample_multiscale_dataset.py \
+  --src "$FULL" \
+  --dst "$SUB" \
+  --n "$N" \
+  --seed "$SEED"
