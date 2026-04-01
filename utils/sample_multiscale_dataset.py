@@ -87,11 +87,6 @@ def main() -> None:
             dst_file.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src_file, dst_file)
 
-    # Keep useful metadata if present.
-    poses_bounds = src / "poses_bounds.npy"
-    if poses_bounds.exists():
-        shutil.copy2(poses_bounds, dst / "poses_bounds.npy")
-
     print(f"Sampled {n} files from {src / 'images'}")
     print(f"Wrote image-only subset to {dst}")
 

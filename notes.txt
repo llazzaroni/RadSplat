@@ -790,6 +790,17 @@ python utils/prepare_vggt_dataset.py \
   --overwrite
 
 
+FULL=/cluster/scratch/rbollati/dataset/bicycle
+SUB=/cluster/scratch/rbollati/dataset/bicycle_sparse_1
+N=30
+SEED=42
+
+python ~/RadSplat/RadSplat/utils/sample_multiscale_dataset.py \
+  --src "$FULL" \
+  --dst "$SUB" \
+  --n "$N" \
+  --seed "$SEED"
+
 FULL=/cluster/scratch/rbollati/dataset/bonsai
 SUB=/cluster/scratch/rbollati/dataset/bonsai_sparse_1
 N=30
