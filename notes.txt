@@ -799,8 +799,10 @@ python utils/prepare_vggt_dataset.py \
   --src /cluster/scratch/rbollati/dataset/bicycle_sparse_1 \
   --dst /cluster/scratch/rbollati/dataset/bicycle_sparse_vggt \
   --overwrite \
-  --pointcloud-subset-size 10 \
-  --pointcloud-seed 42
+  --pointcloud-subset-size 30 \
+  --pointcloud-seed 42 \
+  --conf-thres-value 0.0
+
 
 
 
