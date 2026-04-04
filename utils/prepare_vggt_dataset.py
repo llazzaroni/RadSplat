@@ -303,6 +303,7 @@ def _run_vggt_reconstruction(
     fine_tracking: bool,
     max_reproj_error: float,
     conf_thres_value: float,
+    skip_pointcloud: bool,
 ) -> None:
     _bootstrap_imports()
     _log("importing VGGT reconstruction entrypoint")
@@ -326,6 +327,7 @@ def _run_vggt_reconstruction(
     args.max_query_pts = max_query_pts
     args.fine_tracking = fine_tracking
     args.conf_thres_value = conf_thres_value
+    args.skip_pointcloud = skip_pointcloud
     _log("starting VGGT reconstruction")
     demo_fn(args)
     _log("VGGT reconstruction completed")
@@ -451,7 +453,17 @@ def main() -> None:
             fine_tracking=args.fine_tracking,
             max_reproj_error=args.max_reproj_error,
             conf_thres_value=args.conf_thres_value,
+            skip_pointcloud=args.pointcloud_subset_size > 0,
         )
+        if not args.skip_depth_export:
+            _log("exporting VGGT depth maps")
+            _run_vggt_depth_export(
+                scene_dir=dst,
+                rel_paths=rel_paths,
+                output_prefix=args.output_depth_prefix,
+                img_load_resolution=args.img_load_resolution,
+                vggt_resolution=args.vggt_resolution,
+            )
         if args.pointcloud_subset_size > 0:
             _log("exporting sampled VGGT point cloud")
             _run_vggt_pointcloud_export(
@@ -461,15 +473,6 @@ def main() -> None:
                 vggt_resolution=args.vggt_resolution,
                 conf_thres_value=args.conf_thres_value,
                 max_points=args.max_pointcloud_points,
-            )
-        if not args.skip_depth_export:
-            _log("exporting VGGT depth maps")
-            _run_vggt_depth_export(
-                scene_dir=dst,
-                rel_paths=rel_paths,
-                output_prefix=args.output_depth_prefix,
-                img_load_resolution=args.img_load_resolution,
-                vggt_resolution=args.vggt_resolution,
             )
     _log(f"done: {dst}")
 

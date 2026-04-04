@@ -796,20 +796,13 @@ srun -A ls_polle -p gpupr.4h   --gpus=nvidia_a100_80gb_pcie:1   --cpus-per-task=
 h
 
 python utils/prepare_vggt_dataset.py \
-  --src /cluster/scratch/rbollati/dataset/bonsai_sparse_1 \
-  --dst /cluster/scratch/rbollati/dataset/bonsai_sparse_vggt \
-  --overwrite \
-  --use-ba \
-  --no-fine-tracking \
-  --max-query-pts 1024 \
-  --query-frame-num 4
-
-python utils/prepare_vggt_dataset.py \
   --src /cluster/scratch/rbollati/dataset/bicycle_sparse_1 \
   --dst /cluster/scratch/rbollati/dataset/bicycle_sparse_vggt \
   --overwrite \
   --pointcloud-subset-size 10 \
   --pointcloud-seed 42
+
+
 
 
 python utils/prepare_vggt_dataset.py \
