@@ -802,8 +802,8 @@ python utils/prepare_vggt_dataset.py \
   --conf-thres-value 0.0
 
 python images.py \
-  --nerf-folders /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_2/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_3/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_4/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_5/outputs/ensemble_1/nerfacto/flowers/config.yml \
-  --exp-dirs /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_1 /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_2 /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_3 /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_4 /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_5 \
+  --nerf-folders /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_11/outputs/ensemble_1/depth-nerfacto/depth/config.yml /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_12/outputs/ensemble_1/depth-nerfacto/depth/config.yml \
+  --exp-dirs /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_11 /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_12 \
   --input-dataset /cluster/scratch/rbollati/dataset/bicycle_sparse_vggt \
   --output-dataset /cluster/scratch/rbollati/dataset/bicycle_sparse_aug \
   --tmp-root /cluster/home/rbollati/tmp \
@@ -824,4 +824,24 @@ ns-train depth-nerfacto \
   --downscale-factor 1 \
   --colmap-path /cluster/scratch/rbollati/dataset/bicycle_sparse_vggt/sparse/0 \
   --images-path /cluster/scratch/rbollati/dataset/bicycle_sparse_vggt/images \
-  --depths-path depths_vggt
+  --depths-path /cluster/scratch/rbollati/dataset/bicycle_sparse_vggt/depths_vggt
+
+cd ..
+mkdir nerf_ensemble_12
+cd nerf_ensemble_12
+ns-train depth-nerfacto \
+  --vis tensorboard \
+  --experiment-name ensemble_1 \
+  --timestamp depth \
+  --steps-per-eval-image 30000 \
+  --max-num-iterations 30000 \
+  --save-only-latest-checkpoint True \
+  --logging.steps-per-log 100 \
+  colmap \
+  --downscale-factor 1 \
+  --colmap-path /cluster/scratch/rbollati/dataset/bicycle_sparse_vggt/sparse/0 \
+  --images-path /cluster/scratch/rbollati/dataset/bicycle_sparse_vggt/images \
+  --depths-path /cluster/scratch/rbollati/dataset/bicycle_sparse_vggt/depths_vggt
+
+
+

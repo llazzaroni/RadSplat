@@ -821,6 +821,7 @@ def main(args):
     append_nerf_images_to_colmap(
         colmap_dir=str(colmap_dir),
         new_c2w=new_c2w_colmap.cpu(),   # (K,3,4) in original COLMAP frame
+        camera_id=args.camera_id,
     )
     print(f"[done] final augmented dataset written to: {final_dir}")
 
@@ -846,6 +847,12 @@ if __name__ == "__main__":
         type=int,
         default=50,
         help="Number of final kept synthetic views to add to the dataset (default: 50).",
+    )
+    p.add_argument(
+        "--camera-id",
+        type=int,
+        default=None,
+        help="Explicit COLMAP camera_id to assign to generated NeRF samples. Required when the input COLMAP model has multiple cameras.",
     )
     args = p.parse_args()
     main(args)
