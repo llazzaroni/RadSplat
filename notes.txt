@@ -796,90 +796,32 @@ srun -A ls_polle -p gpupr.4h   --gpus=nvidia_a100_80gb_pcie:1   --cpus-per-task=
 h
 
 python utils/prepare_vggt_dataset.py \
-  --src /cluster/scratch/rbollati/dataset/bicycle_sparse_1 \
-  --dst /cluster/scratch/rbollati/dataset/bicycle_sparse_vggt \
+  --src /cluster/scratch/rbollati/dataset/bonsai_sparse_1 \
+  --dst /cluster/scratch/rbollati/dataset/bonsai_sparse_vggt \
   --overwrite \
-  --pointcloud-subset-size 30 \
-  --pointcloud-seed 42 \
   --conf-thres-value 0.0
 
+python images.py \
+  --nerf-folders /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_1/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_2/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_3/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_4/outputs/ensemble_1/nerfacto/flowers/config.yml /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_5/outputs/ensemble_1/nerfacto/flowers/config.yml \
+  --exp-dirs /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_1 /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_2 /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_3 /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_4 /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_5 \
+  --input-dataset /cluster/scratch/rbollati/dataset/bicycle_sparse_vggt \
+  --output-dataset /cluster/scratch/rbollati/dataset/bicycle_sparse_aug \
+  --tmp-root /cluster/home/rbollati/tmp \
+  --tau 1.5 \
+  --debug-plot-dir image_supervision \
+  --num-final-samples 200 \
+  --final-render-scale 0.125
 
-
-
-
-python utils/prepare_vggt_dataset.py \
-  --src /cluster/scratch/rbollati/dataset/counter_sparse_1 \
-  --dst /cluster/scratch/rbollati/dataset/counter_sparse_vggt \
-  --overwrite \
-  --use-ba \
-  --no-fine-tracking \
-  --max-query-pts 1024 \
-  --query-frame-num 4
-
-python utils/prepare_vggt_dataset.py \
-  --src /cluster/scratch/rbollati/dataset/flowers_sparse_1 \
-  --dst /cluster/scratch/rbollati/dataset/flowers_sparse_vggt \
-  --overwrite \
-  --use-ba \
-  --no-fine-tracking \
-  --max-query-pts 1024 \
-  --query-frame-num 4
-
-python utils/prepare_vggt_dataset.py \
-  --src /cluster/scratch/rbollati/dataset/garden_sparse_1 \
-  --dst /cluster/scratch/rbollati/dataset/garden_sparse_vggt \
-  --overwrite \
-  --use-ba \
-  --no-fine-tracking \
-  --max-query-pts 1024 \
-  --query-frame-num 4
-
-python utils/prepare_vggt_dataset.py \
-  --src /cluster/scratch/rbollati/dataset/kitchen_sparse_1 \
-  --dst /cluster/scratch/rbollati/dataset/kitchen_sparse_vggt \
-  --overwrite \
-  --use-ba \
-  --no-fine-tracking \
-  --max-query-pts 1024 \
-  --query-frame-num 4
-
-python utils/prepare_vggt_dataset.py \
-  --src /cluster/scratch/rbollati/dataset/room_sparse_1 \
-  --dst /cluster/scratch/rbollati/dataset/room_sparse_vggt \
-  --overwrite \
-  --use-ba \
-  --no-fine-tracking \
-  --max-query-pts 1024 \
-  --query-frame-num 4
-
-python utils/prepare_vggt_dataset.py \
-  --src /cluster/scratch/rbollati/dataset/stump_sparse_1 \
-  --dst /cluster/scratch/rbollati/dataset/stump_sparse_vggt \
-  --overwrite \
-  --use-ba \
-  --no-fine-tracking \
-  --max-query-pts 1024 \
-  --query-frame-num 4
-
-python utils/prepare_vggt_dataset.py \
-  --src /cluster/scratch/rbollati/dataset/treehill_sparse_1 \
-  --dst /cluster/scratch/rbollati/dataset/treehill_sparse_vggt \
-  --overwrite \
-  --use-ba \
-  --no-fine-tracking \
-  --max-query-pts 1024 \
-  --query-frame-num 4
-
-ns-train nerfacto \
+ns-train depth-nerfacto \
   --vis tensorboard \
   --experiment-name ensemble_1 \
-  --timestamp flowers \
+  --timestamp depth \
   --steps-per-eval-image 30000 \
   --max-num-iterations 30000 \
   --save-only-latest-checkpoint True \
   --logging.steps-per-log 100 \
-  --logging.profiler pytorch \
   colmap \
   --downscale-factor 1 \
   --colmap-path /cluster/scratch/rbollati/dataset/bicycle_sparse_vggt/sparse/0 \
-  --images-path /cluster/scratch/rbollati/dataset/bicycle_sparse_vggt/images
+  --images-path /cluster/scratch/rbollati/dataset/bicycle_sparse_vggt/images \
+  --depths-path depths_vggt
