@@ -801,47 +801,31 @@ python utils/prepare_vggt_dataset.py \
   --overwrite \
   --conf-thres-value 0.0
 
-python images.py \
-  --nerf-folders /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_11/outputs/ensemble_1/depth-nerfacto/depth/config.yml /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_12/outputs/ensemble_1/depth-nerfacto/depth/config.yml \
-  --exp-dirs /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_11 /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_12 \
-  --input-dataset /cluster/scratch/rbollati/dataset/bicycle_sparse_vggt \
-  --output-dataset /cluster/scratch/rbollati/dataset/bicycle_sparse_aug \
-  --tmp-root /cluster/home/rbollati/tmp \
-  --tau 1.5 \
-  --debug-plot-dir image_supervision \
-  --num-final-samples 200 \
-  --final-render-scale 0.125
 
-ns-train depth-nerfacto \
-  --vis tensorboard \
-  --experiment-name ensemble_1 \
-  --timestamp depth \
-  --steps-per-eval-image 30000 \
-  --max-num-iterations 30000 \
-  --save-only-latest-checkpoint True \
-  --logging.steps-per-log 100 \
-  colmap \
-  --downscale-factor 1 \
-  --colmap-path /cluster/scratch/rbollati/dataset/bicycle_sparse_vggt/sparse/0 \
-  --images-path /cluster/scratch/rbollati/dataset/bicycle_sparse_vggt/images \
-  --depths-path /cluster/scratch/rbollati/dataset/bicycle_sparse_vggt/depths_vggt
+python ~/RadSplat/RadSplat/nerf_step.py \
+    --nerf-folder /cluster/scratch/rbollati/models_treehill/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/depth/config.yml \
+    --output-name /cluster/scratch/rbollati/models_treehill/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/depth/ray_sample.pt \
+    --sampling-size 1000000 \
+    --ray-sampling-strategy random
 
-cd ..
-mkdir nerf_ensemble_12
-cd nerf_ensemble_12
-ns-train depth-nerfacto \
-  --vis tensorboard \
-  --experiment-name ensemble_1 \
-  --timestamp depth \
-  --steps-per-eval-image 30000 \
-  --max-num-iterations 30000 \
-  --save-only-latest-checkpoint True \
-  --logging.steps-per-log 100 \
-  colmap \
-  --downscale-factor 1 \
-  --colmap-path /cluster/scratch/rbollati/dataset/bicycle_sparse_vggt/sparse/0 \
-  --images-path /cluster/scratch/rbollati/dataset/bicycle_sparse_vggt/images \
-  --depths-path /cluster/scratch/rbollati/dataset/bicycle_sparse_vggt/depths_vggt
+
+python -m experiments.run_gsplat default \
+  --no-nerf-init \
+  --dual-runner \
+  --data_dir /cluster/scratch/rbollati/dataset/bicycle_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/models_bicycle/gsplat \
+  --pt_path /cluster/scratch/rbollati/models_bicycle/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/depth/ray_sample.pt \
+  --data_factor 1 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --max_steps 20000 \
+  --strategy.reset-every 100000000 \
+  --dual_nerf_loss_weight 0 \
+  --deterministic \
+  --disable-viewer
 
 
 
