@@ -3,6 +3,7 @@ import json
 import os
 import sys
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 import torch
@@ -16,6 +17,7 @@ from submodules.gsplat.gsplat.distributed import cli
 from submodules.gsplat.gsplat.strategy import DefaultStrategy, MCMCStrategy
 
 
+@dataclass
 class ExperimentConfig(Config):
     # Training mode selection:
     # --dual-runner only -> dual
