@@ -241,45 +241,13 @@ ns-train nerfacto \
 4) step: query the nerf models and generate the augmented datasets.
 
 python images.py \
-  --model-roots /cluster/scratch/rbollati/new_exp/models_bicycle \
-  --checkpoint-step 800 \
-  --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/bicycle_sparse_vggt \
-  --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/bicycle_sparse_aug \
-  --tmp-root /cluster/home/rbollati/tmp \
-  --tau 1.5 \
-  --debug-plot-dir image_supervision \
-  --num-final-samples 200 \
-  --final-render-scale 0.125
-
-python images.py \
-  --model-roots /cluster/scratch/rbollati/new_exp/models_bonsai \
-  --checkpoint-step 800 \
-  --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/bonsai_sparse_vggt \
-  --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/bonsai_sparse_aug \
-  --tmp-root /cluster/home/rbollati/tmp \
-  --tau 1.5 \
-  --debug-plot-dir image_supervision \
-  --num-final-samples 200 \
-  --final-render-scale 0.125
-
-python images.py \
-  --model-roots /cluster/scratch/rbollati/new_exp/models_counter \
-  --checkpoint-step 200 \
-  --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/counter_sparse_vggt \
-  --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/counter_sparse_aug \
-  --tmp-root /cluster/home/rbollati/tmp \
-  --tau 1.5 \
-  --debug-plot-dir image_supervision \
-  --num-final-samples 200 \
-  --final-render-scale 0.125
-
-python images.py \
   --model-roots /cluster/scratch/rbollati/new_exp/models_flowers \
   --checkpoint-step 2400 \
   --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/flowers_sparse_vggt \
   --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/flowers_sparse_aug \
   --tmp-root /cluster/home/rbollati/tmp \
   --tau 1.5 \
+  --camera-id 1 \
   --debug-plot-dir image_supervision \
   --num-final-samples 200 \
   --final-render-scale 0.125
@@ -291,6 +259,7 @@ python images.py \
   --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/garden_sparse_aug \
   --tmp-root /cluster/home/rbollati/tmp \
   --tau 1.5 \
+  --camera-id 1 \
   --debug-plot-dir image_supervision \
   --num-final-samples 200 \
   --final-render-scale 0.125
@@ -302,6 +271,7 @@ python images.py \
   --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/kitchen_sparse_aug \
   --tmp-root /cluster/home/rbollati/tmp \
   --tau 1.5 \
+  --camera-id 1 \
   --debug-plot-dir image_supervision \
   --num-final-samples 200 \
   --final-render-scale 0.125
@@ -313,31 +283,66 @@ python images.py \
   --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/room_sparse_aug \
   --tmp-root /cluster/home/rbollati/tmp \
   --tau 1.5 \
+  --camera-id 1 \
+  --debug-plot-dir image_supervision \
+  --num-final-samples 200 \
+  --final-render-scale 0.125
+
+python images.py \
+  --model-roots /cluster/scratch/rbollati/new_exp/models_bicycle \
+  --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/bicycle_sparse_vggt \
+  --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/bicycle_sparse_aug \
+  --tmp-root /cluster/home/rbollati/tmp \
+  --tau 1.5 \
+  --camera-id 1 \
+  --debug-plot-dir image_supervision \
+  --num-final-samples 200 \
+  --final-render-scale 0.125
+
+python images.py \
+  --model-roots /cluster/scratch/rbollati/new_exp/models_bonsai \
+  --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/bonsai_sparse_vggt \
+  --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/bonsai_sparse_aug \
+  --tmp-root /cluster/home/rbollati/tmp \
+  --tau 1.5 \
+  --camera-id 1 \
+  --debug-plot-dir image_supervision \
+  --num-final-samples 200 \
+  --final-render-scale 0.125
+
+python images.py \
+  --model-roots /cluster/scratch/rbollati/new_exp/models_counter \
+  --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/counter_sparse_vggt \
+  --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/counter_sparse_aug \
+  --tmp-root /cluster/home/rbollati/tmp \
+  --tau 1.5 \
+  --camera-id 1 \
   --debug-plot-dir image_supervision \
   --num-final-samples 200 \
   --final-render-scale 0.125
 
 python images.py \
   --model-roots /cluster/scratch/rbollati/new_exp/models_stump \
-  --checkpoint-step 600 \
   --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/stump_sparse_vggt \
   --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/stump_sparse_aug \
   --tmp-root /cluster/home/rbollati/tmp \
   --tau 1.5 \
+  --camera-id 1 \
   --debug-plot-dir image_supervision \
   --num-final-samples 200 \
   --final-render-scale 0.125
 
 python images.py \
   --model-roots /cluster/scratch/rbollati/new_exp/models_treehill \
-  --checkpoint-step 200 \
   --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/treehill_sparse_vggt \
   --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/treehill_sparse_aug \
   --tmp-root /cluster/home/rbollati/tmp \
   --tau 1.5 \
+  --camera-id 1 \
   --debug-plot-dir image_supervision \
   --num-final-samples 200 \
   --final-render-scale 0.125
+
 
 srun -A ls_polle -p gpuhe.4h --ntasks=1 --mem-per-cpu=4G --cpus-per-task=4 --gpus=nvidia_geforce_rtx_4090:1 --time=10:00:00 --pty bash
 
@@ -496,12 +501,700 @@ python ~/RadSplat/RadSplat/nerf_step.py \
 
 6) step: run gsplat
 
+python images.py \
+  --model-roots /cluster/scratch/rbollati/new_exp/models_flowers \
+  --checkpoint-step 2400 \
+  --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/flowers_sparse_vggt \
+  --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/flowers_sparse_aug \
+  --tmp-root /cluster/home/rbollati/tmp \
+  --tau 1.5 \
+  --camera-id 1 \
+  --debug-plot-dir image_supervision \
+  --num-final-samples 200 \
+  --final-render-scale 0.125
+
+python images.py \
+  --model-roots /cluster/scratch/rbollati/new_exp/models_garden \
+  --checkpoint-step 4000 \
+  --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/garden_sparse_vggt \
+  --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/garden_sparse_aug \
+  --tmp-root /cluster/home/rbollati/tmp \
+  --tau 1.5 \
+  --camera-id 1 \
+  --debug-plot-dir image_supervision \
+  --num-final-samples 200 \
+  --final-render-scale 0.125
+
+python images.py \
+  --model-roots /cluster/scratch/rbollati/new_exp/models_kitchen \
+  --checkpoint-step 1600 \
+  --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/kitchen_sparse_vggt \
+  --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/kitchen_sparse_aug \
+  --tmp-root /cluster/home/rbollati/tmp \
+  --tau 1.5 \
+  --camera-id 1 \
+  --debug-plot-dir image_supervision \
+  --num-final-samples 200 \
+  --final-render-scale 0.125
+
+python images.py \
+  --model-roots /cluster/scratch/rbollati/new_exp/models_room \
+  --checkpoint-step 30000 \
+  --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/room_sparse_vggt \
+  --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/room_sparse_aug \
+  --tmp-root /cluster/home/rbollati/tmp \
+  --tau 1.5 \
+  --camera-id 1 \
+  --debug-plot-dir image_supervision \
+  --num-final-samples 200 \
+  --final-render-scale 0.125
+
+python images.py \
+  --model-roots /cluster/scratch/rbollati/new_exp/models_bicycle \
+  --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/bicycle_sparse_vggt \
+  --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/bicycle_sparse_aug \
+  --tmp-root /cluster/home/rbollati/tmp \
+  --tau 1.5 \
+  --camera-id 1 \
+  --debug-plot-dir image_supervision \
+  --num-final-samples 200 \
+  --final-render-scale 0.125
+
+python images.py \
+  --model-roots /cluster/scratch/rbollati/new_exp/models_bonsai \
+  --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/bonsai_sparse_vggt \
+  --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/bonsai_sparse_aug \
+  --tmp-root /cluster/home/rbollati/tmp \
+  --tau 1.5 \
+  --camera-id 1 \
+  --debug-plot-dir image_supervision \
+  --num-final-samples 200 \
+  --final-render-scale 0.125
+
+python images.py \
+  --model-roots /cluster/scratch/rbollati/new_exp/models_counter \
+  --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/counter_sparse_vggt \
+  --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/counter_sparse_aug \
+  --tmp-root /cluster/home/rbollati/tmp \
+  --tau 1.5 \
+  --camera-id 1 \
+  --debug-plot-dir image_supervision \
+  --num-final-samples 200 \
+  --final-render-scale 0.125
+
+python images.py \
+  --model-roots /cluster/scratch/rbollati/new_exp/models_stump \
+  --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/stump_sparse_vggt \
+  --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/stump_sparse_aug \
+  --tmp-root /cluster/home/rbollati/tmp \
+  --tau 1.5 \
+  --camera-id 1 \
+  --debug-plot-dir image_supervision \
+  --num-final-samples 200 \
+  --final-render-scale 0.125
+
+python images.py \
+  --model-roots /cluster/scratch/rbollati/new_exp/models_treehill \
+  --input-dataset /cluster/scratch/rbollati/new_exp/360_v2/treehill_sparse_vggt \
+  --output-dataset /cluster/scratch/rbollati/new_exp/360_v2/treehill_sparse_aug \
+  --tmp-root /cluster/home/rbollati/tmp \
+  --tau 1.5 \
+  --camera-id 1 \
+  --debug-plot-dir image_supervision \
+  --num-final-samples 200 \
+  --final-render-scale 0.125
+
 python -m experiments.run_gsplat default \
   --dual_runner \
   --no-nerf_init \
-  --data_dir /path/to/dataset_aug \
-  --result_dir /path/to/results_dual_zero_nerf \
-  --pt_path /path/to/ray_sample.pt \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/bicycle_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_bicycle/gsplat_dual_1 \
+  --pt_path /cluster/scratch/rbollati/new_exp/models_bicycle/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/bicycle/ray_sample.pt \
+  --data_factor 1 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_loss_weight 2 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --max_steps 15000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python -m experiments.run_gsplat default \
+  --dual_runner \
+  --no-nerf_init \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/bonsai_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_bonsai/gsplat_dual_1 \
+  --pt_path /cluster/scratch/rbollati/new_exp/models_bonsai/nerf_ensemble_1/outputs/ensemble_1/nerfacto/bonsai/ray_sample.pt \
+  --data_factor 1 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_loss_weight 2 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --max_steps 15000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python -m experiments.run_gsplat default \
+  --dual_runner \
+  --no-nerf_init \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/counter_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_counter/gsplat_dual_1 \
+  --pt_path /cluster/scratch/rbollati/new_exp/models_counter/nerf_ensemble_1/outputs/ensemble_1/nerfacto/counter/ray_sample.pt \
+  --data_factor 1 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_loss_weight 2 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --max_steps 15000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python -m experiments.run_gsplat default \
+  --dual_runner \
+  --no-nerf_init \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/flowers_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_flowers/gsplat_dual_1 \
+  --pt_path /cluster/scratch/rbollati/new_exp/models_flowers/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/flowers/ray_sample.pt \
+  --data_factor 1 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_loss_weight 2 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --max_steps 15000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python -m experiments.run_gsplat default \
+  --dual_runner \
+  --no-nerf_init \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/garden_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_garden/gsplat_dual_1 \
+  --pt_path /cluster/scratch/rbollati/new_exp/models_garden/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/garden/ray_sample.pt \
+  --data_factor 1 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_loss_weight 2 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --max_steps 15000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python -m experiments.run_gsplat default \
+  --dual_runner \
+  --no-nerf_init \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/kitchen_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_kitchen/gsplat_dual_1 \
+  --pt_path /cluster/scratch/rbollati/new_exp/models_kitchen/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/kitchen/ray_sample.pt \
+  --data_factor 1 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_loss_weight 2 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --max_steps 15000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python -m experiments.run_gsplat default \
+  --dual_runner \
+  --no-nerf_init \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/room_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_room/gsplat_dual_1 \
+  --pt_path /cluster/scratch/rbollati/new_exp/models_room/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/room/ray_sample.pt \
+  --data_factor 1 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_loss_weight 2 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --max_steps 15000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python -m experiments.run_gsplat default \
+  --dual_runner \
+  --no-nerf_init \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/stump_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_stump/gsplat_dual_1 \
+  --pt_path /cluster/scratch/rbollati/new_exp/models_stump/nerf_ensemble_1/outputs/ensemble_1/nerfacto/stump/ray_sample.pt \
+  --data_factor 1 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_loss_weight 2 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --max_steps 15000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python -m experiments.run_gsplat default \
+  --dual_runner \
+  --no-nerf_init \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/treehill_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_treehill/gsplat_dual_1 \
+  --pt_path /cluster/scratch/rbollati/new_exp/models_treehill/nerf_ensemble_1/outputs/ensemble_1/nerfacto/treehill/ray_sample.pt \
+  --data_factor 1 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_loss_weight 2 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --max_steps 15000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python -m experiments.run_gsplat default \
+  --no-nerf_init \
+  --dual_runner \
+  --staged-runner \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/bicycle_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_bicycle/gsplat_staged_1\
+  --pt_path /cluster/scratch/rbollati/new_exp/models_bicycle/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/bicycle/ray_sample.pt \
+  --data_factor 1 \
+  --staged_nerf_phase_steps 300 \
+  --staged_real_phase_steps 15000 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --dual_nerf_loss_weight 0 \
+  --max_steps 15000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python -m experiments.run_gsplat default \
+  --no-nerf_init \
+  --dual_runner \
+  --staged-runner \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/bonsai_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_bonsai/gsplat_staged_1\
+  --pt_path /cluster/scratch/rbollati/new_exp/models_bonsai/nerf_ensemble_1/outputs/ensemble_1/nerfacto/bonsai/ray_sample.pt \
+  --data_factor 1 \
+  --staged_nerf_phase_steps 300 \
+  --staged_real_phase_steps 15000 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --dual_nerf_loss_weight 0 \
+  --max_steps 15000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python -m experiments.run_gsplat default \
+  --no-nerf_init \
+  --dual_runner \
+  --staged-runner \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/counter_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_counter/gsplat_staged_1\
+  --pt_path /cluster/scratch/rbollati/new_exp/models_counter/nerf_ensemble_1/outputs/ensemble_1/nerfacto/counter/ray_sample.pt \
+  --data_factor 1 \
+  --staged_nerf_phase_steps 300 \
+  --staged_real_phase_steps 15000 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --dual_nerf_loss_weight 0 \
+  --max_steps 15000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python -m experiments.run_gsplat default \
+  --no-nerf_init \
+  --dual_runner \
+  --staged-runner \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/garden_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_garden/gsplat_staged_1\
+  --pt_path /cluster/scratch/rbollati/new_exp/models_garden/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/garden/ray_sample.pt \
+  --data_factor 1 \
+  --staged_nerf_phase_steps 300 \
+  --staged_real_phase_steps 15000 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --dual_nerf_loss_weight 0 \
+  --max_steps 15000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python -m experiments.run_gsplat default \
+  --no-nerf_init \
+  --dual_runner \
+  --staged-runner \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/flowers_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_flowers/gsplat_staged_1\
+  --pt_path /cluster/scratch/rbollati/new_exp/models_flowers/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/flowers/ray_sample.pt \
+  --data_factor 1 \
+  --staged_nerf_phase_steps 300 \
+  --staged_real_phase_steps 15000 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --dual_nerf_loss_weight 0 \
+  --max_steps 15000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python -m experiments.run_gsplat default \
+  --no-nerf_init \
+  --dual_runner \
+  --staged-runner \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/kitchen_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_kitchen/gsplat_staged_1\
+  --pt_path /cluster/scratch/rbollati/new_exp/models_kitchen/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/kitchen/ray_sample.pt \
+  --data_factor 1 \
+  --staged_nerf_phase_steps 300 \
+  --staged_real_phase_steps 15000 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --dual_nerf_loss_weight 0 \
+  --max_steps 15000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python -m experiments.run_gsplat default \
+  --no-nerf_init \
+  --dual_runner \
+  --staged-runner \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/room_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_room/gsplat_staged_1\
+  --pt_path /cluster/scratch/rbollati/new_exp/models_room/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/room/ray_sample.pt \
+  --data_factor 1 \
+  --staged_nerf_phase_steps 300 \
+  --staged_real_phase_steps 15000 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --dual_nerf_loss_weight 0 \
+  --max_steps 15000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python -m experiments.run_gsplat default \
+  --no-nerf_init \
+  --dual_runner \
+  --staged-runner \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/stump_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_stump/gsplat_staged_1\
+  --pt_path /cluster/scratch/rbollati/new_exp/models_stump/nerf_ensemble_1/outputs/ensemble_1/nerfacto/stump/ray_sample.pt \
+  --data_factor 1 \
+  --staged_nerf_phase_steps 300 \
+  --staged_real_phase_steps 15000 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --dual_nerf_loss_weight 0 \
+  --max_steps 15000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python -m experiments.run_gsplat default \
+  --no-nerf_init \
+  --dual_runner \
+  --staged-runner \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/treehill_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_treehill/gsplat_staged_1\
+  --pt_path /cluster/scratch/rbollati/new_exp/models_treehill/nerf_ensemble_1/outputs/ensemble_1/nerfacto/treehill/ray_sample.pt \
+  --data_factor 1 \
+  --staged_nerf_phase_steps 300 \
+  --staged_real_phase_steps 15000 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --dual_nerf_loss_weight 0 \
+  --max_steps 15000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python -m experiments.run_gsplat default \
+  --no-nerf_init \
+  --dual_runner \
+  --staged-runner \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/bicycle_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_bicycle/gsplat_staged_2\
+  --pt_path /cluster/scratch/rbollati/new_exp/models_bicycle/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/bicycle/ray_sample.pt \
+  --data_factor 1 \
+  --staged_nerf_phase_steps 100 \
+  --staged_real_phase_steps 15000 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --dual_nerf_loss_weight 0 \
+  --max_steps 15000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python -m experiments.run_gsplat default \
+  --no-nerf_init \
+  --dual_runner \
+  --staged-runner \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/bonsai_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_bonsai/gsplat_staged_2\
+  --pt_path /cluster/scratch/rbollati/new_exp/models_bonsai/nerf_ensemble_1/outputs/ensemble_1/nerfacto/bonsai/ray_sample.pt \
+  --data_factor 1 \
+  --staged_nerf_phase_steps 100 \
+  --staged_real_phase_steps 15000 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --dual_nerf_loss_weight 0 \
+  --max_steps 15000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python -m experiments.run_gsplat default \
+  --no-nerf_init \
+  --dual_runner \
+  --staged-runner \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/counter_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_counter/gsplat_staged_2\
+  --pt_path /cluster/scratch/rbollati/new_exp/models_counter/nerf_ensemble_1/outputs/ensemble_1/nerfacto/counter/ray_sample.pt \
+  --data_factor 1 \
+  --staged_nerf_phase_steps 100 \
+  --staged_real_phase_steps 15000 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --dual_nerf_loss_weight 0 \
+  --max_steps 15000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python -m experiments.run_gsplat default \
+  --no-nerf_init \
+  --dual_runner \
+  --staged-runner \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/garden_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_garden/gsplat_staged_2\
+  --pt_path /cluster/scratch/rbollati/new_exp/models_garden/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/garden/ray_sample.pt \
+  --data_factor 1 \
+  --staged_nerf_phase_steps 100 \
+  --staged_real_phase_steps 15000 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --dual_nerf_loss_weight 0 \
+  --max_steps 15000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python -m experiments.run_gsplat default \
+  --no-nerf_init \
+  --dual_runner \
+  --staged-runner \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/flowers_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_flowers/gsplat_staged_2\
+  --pt_path /cluster/scratch/rbollati/new_exp/models_flowers/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/flowers/ray_sample.pt \
+  --data_factor 1 \
+  --staged_nerf_phase_steps 100 \
+  --staged_real_phase_steps 15000 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --dual_nerf_loss_weight 0 \
+  --max_steps 15000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python -m experiments.run_gsplat default \
+  --no-nerf_init \
+  --dual_runner \
+  --staged-runner \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/kitchen_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_kitchen/gsplat_staged_2\
+  --pt_path /cluster/scratch/rbollati/new_exp/models_kitchen/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/kitchen/ray_sample.pt \
+  --data_factor 1 \
+  --staged_nerf_phase_steps 100 \
+  --staged_real_phase_steps 15000 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --dual_nerf_loss_weight 0 \
+  --max_steps 15000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python -m experiments.run_gsplat default \
+  --no-nerf_init \
+  --dual_runner \
+  --staged-runner \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/room_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_room/gsplat_staged_2\
+  --pt_path /cluster/scratch/rbollati/new_exp/models_room/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/room/ray_sample.pt \
+  --data_factor 1 \
+  --staged_nerf_phase_steps 100 \
+  --staged_real_phase_steps 15000 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --dual_nerf_loss_weight 0 \
+  --max_steps 15000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python -m experiments.run_gsplat default \
+  --no-nerf_init \
+  --dual_runner \
+  --staged-runner \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/stump_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_stump/gsplat_staged_2\
+  --pt_path /cluster/scratch/rbollati/new_exp/models_stump/nerf_ensemble_1/outputs/ensemble_1/nerfacto/stump/ray_sample.pt \
+  --data_factor 1 \
+  --staged_nerf_phase_steps 100 \
+  --staged_real_phase_steps 15000 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --dual_nerf_loss_weight 0 \
+  --max_steps 15000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python -m experiments.run_gsplat default \
+  --no-nerf_init \
+  --dual_runner \
+  --staged-runner \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/treehill_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_treehill/gsplat_staged_2\
+  --pt_path /cluster/scratch/rbollati/new_exp/models_treehill/nerf_ensemble_1/outputs/ensemble_1/nerfacto/treehill/ray_sample.pt \
+  --data_factor 1 \
+  --staged_nerf_phase_steps 100 \
+  --staged_real_phase_steps 15000 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --dual_nerf_loss_weight 0 \
+  --max_steps 15000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python ~/RadSplat/RadSplat/utils/plot_gsplat_eval_stats.py \
+  --run-dir /cluster/scratch/rbollati/new_exp/models_stump/gsplat \
+  --label 3DGS \
+  --run-dir /cluster/scratch/rbollati/new_exp/models_stump/gsplat_dual_1 \
+  --label "AugSplat dual" \
+  --run-dir /cluster/scratch/rbollati/new_exp/models_stump/gsplat_staged_1 \
+  --label AugSplat staged" \
+  --plot-style lines \
+  --max-step 15000 \
+  --out-dir /cluster/scratch/rbollati/new_exp/models_flowers/gsplat_compare_plots
+
+python utils/report_gsplat_reference_metrics.py \
+  --run-dir /cluster/scratch/rbollati/new_exp/models_treehill/gsplat \
+  --run-dir /cluster/scratch/rbollati/new_exp/models_treehill/gsplat_dual_1 \
+  --run-dir /cluster/scratch/rbollati/new_exp/models_treehill/gsplat_staged_1 \
+  --label gsplat \
+  --label dual_1 \
+  --label staged_1 \
+  --reference-run-dir /cluster/scratch/rbollati/new_exp/models_treehill/gsplat \
+  --source auto \
+  --stage val \
+  --step-interval 100 \
+  --max-step 15000
+
+python -m experiments.run_gsplat default \
+  --dual_runner \
+  --no-nerf_init \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/kitchen_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_kitchen/gsplat \
+  --pt_path /cluster/scratch/rbollati/new_exp/models_kitchen/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/stump/ray_sample.pt \
+  --data_factor 1 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_loss_weight 2 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --max_steps 15000 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer \
+  --disable_video \
+  --ckpt /cluster/scratch/rbollati/new_exp/models_kitchen/gsplat/ckpts/best_ckpt_rank0.pt
+
+
+python -m experiments.run_gsplat default \
+  --dual_runner \
+  --no-nerf_init \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/kitchen_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_kitchen/gsplat \
+  --pt_path /cluster/scratch/rbollati/new_exp/models_kitchen/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/kitchen/ray_sample.pt \
   --data_factor 1 \
   --nerf_samples_data_factor 8 \
   --batch_size 1 \
@@ -509,7 +1202,46 @@ python -m experiments.run_gsplat default \
   --dual_nerf_loss_weight 0 \
   --dual_nerf_decay_steps_to_quarter 300 \
   --dual_nerf_disable_threshold 0.1 \
-  --max_steps 20000 \
+  --max_steps 1250 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python -m experiments.run_gsplat default \
+  --dual_runner \
+  --no-nerf_init \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/garden_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_garden/gsplat_dual_1 \
+  --pt_path /cluster/scratch/rbollati/new_exp/models_garden/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/kitchen/ray_sample.pt \
+  --data_factor 1 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_loss_weight 2 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --max_steps 1250 \
+  --strategy.reset_every 100000000 \
+  --deterministic \
+  --disable_viewer
+
+python -m experiments.run_gsplat default \
+  --no-nerf_init \
+  --dual_runner \
+  --staged-runner \
+  --data_dir /cluster/scratch/rbollati/new_exp/360_v2/garden_sparse_aug \
+  --result_dir /cluster/scratch/rbollati/new_exp/models_garden/gsplat_staged_1\
+  --pt_path /cluster/scratch/rbollati/new_exp/models_garden/nerf_ensemble_1/outputs/ensemble_1/depth-nerfacto/kitchen/ray_sample.pt \
+  --data_factor 1 \
+  --staged_nerf_phase_steps 300 \
+  --staged_real_phase_steps 15000 \
+  --nerf_samples_data_factor 8 \
+  --batch_size 1 \
+  --nerf_batch_factor 20 \
+  --dual_nerf_decay_steps_to_quarter 300 \
+  --dual_nerf_disable_threshold 0.1 \
+  --dual_nerf_loss_weight 0 \
+  --max_steps 1250 \
   --strategy.reset_every 100000000 \
   --deterministic \
   --disable_viewer

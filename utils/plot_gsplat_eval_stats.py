@@ -14,6 +14,12 @@ import matplotlib.pyplot as plt
 STEP_RE = re.compile(r"^(?P<stage>[a-zA-Z0-9_]+)_step(?P<step>\d+)\.json$")
 
 
+def _ylabel_for_metric(metric: str) -> str:
+    if metric == "psnr_ssim_lpips_combo":
+        return "avg metric = (10^(-PSNR/10) * sqrt(1-SSIM) * LPIPS)^(1/3)"
+    return metric
+
+
 def _load_from_stats_dir(run_dir: Path, stage: str, max_step: int = -1) -> List[Tuple[int, Dict]]:
     stats_dir = run_dir / "stats"
     if not stats_dir.is_dir():
@@ -131,8 +137,7 @@ def plot_metrics(
         plt.figure(figsize=(7, 4))
         plt.plot(xs, ys, marker=_marker_for_style(plot_style), linewidth=1.5)
         plt.xlabel("Step")
-        plt.ylabel(metric)
-        plt.title(f"{title_prefix} - {metric}")
+        plt.ylabel(_ylabel_for_metric(metric))
         plt.grid(True, alpha=0.3)
         plt.tight_layout()
         plt.savefig(out_dir / f"{metric}.png", dpi=180)
@@ -147,10 +152,9 @@ def plot_metrics(
         for ax, metric in zip(axes, combo):
             xs, ys = series[metric]
             ax.plot(xs, ys, marker=_marker_for_style(plot_style), linewidth=1.5)
-            ax.set_title(metric)
             ax.set_xlabel("Step")
+            ax.set_ylabel(_ylabel_for_metric(metric))
             ax.grid(True, alpha=0.3)
-        fig.suptitle(f"{title_prefix} - Main Metrics")
         fig.tight_layout()
         fig.savefig(out_dir / "main_metrics.png", dpi=180)
         plt.close(fig)
@@ -197,8 +201,7 @@ def plot_comparison(
             plt.close()
             continue
         plt.xlabel("Step")
-        plt.ylabel(metric)
-        plt.title(f"GSplat Comparison - {metric}")
+        plt.ylabel(_ylabel_for_metric(metric))
         plt.grid(True, alpha=0.3)
         plt.legend()
         plt.tight_layout()
@@ -216,11 +219,10 @@ def plot_comparison(
                     continue
                 xs, ys = run_metrics[metric]
                 ax.plot(xs, ys, marker=_marker_for_style(plot_style), linewidth=1.5, label=label)
-            ax.set_title(metric)
             ax.set_xlabel("Step")
+            ax.set_ylabel(_ylabel_for_metric(metric))
             ax.grid(True, alpha=0.3)
         axes[0].legend()
-        fig.suptitle("GSplat Comparison - Main Metrics")
         fig.tight_layout()
         fig.savefig(out_dir / "compare_main_metrics.png", dpi=180)
         plt.close(fig)
