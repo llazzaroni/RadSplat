@@ -17,6 +17,7 @@ class Config:
     ckpt: Optional[List[str]] = None
 
     save_first_ckp: bool = False
+    save_last_ckpt: bool = False
     nerf_init: bool = True
     # Name of compression strategy to use
     compression: Optional[Literal["png"]] = None

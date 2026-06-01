@@ -809,7 +809,9 @@ class Runner:
                 )
                 # Update the scene.
                 self.viewer.update(step, num_train_rays_per_step)
-            
+
+        if cfg.save_last_ckpt:
+            self.save_last_ckpt(step=step)
 
     @torch.no_grad()
     def eval(self, step: int, stage: str = "val", split: str = "val"):
@@ -970,6 +972,29 @@ class Runner:
         print("Eval done!")
         self.stats_arr.append(stats)
         return stats
+
+    def save_last_ckpt(self, step: int, **extra_state):
+        ckpt = {
+            "step": int(step),
+            "splats": self.splats.state_dict(),
+        }
+        if self.cfg.pose_opt:
+            ckpt["pose_adjust"] = (
+                self.pose_adjust.module.state_dict()
+                if self.world_size > 1
+                else self.pose_adjust.state_dict()
+            )
+        if self.cfg.app_opt:
+            ckpt["app_module"] = (
+                self.app_module.module.state_dict()
+                if self.world_size > 1
+                else self.app_module.state_dict()
+            )
+        ckpt.update(extra_state)
+
+        last_path = f"{self.ckpt_dir}/last_ckpt_rank{self.world_rank}.pt"
+        torch.save(ckpt, last_path)
+        print(f"[last-ckpt] saved {last_path} at step={step}")
 
     def save_ckpt(self):
         print("got to the save_ckpt function!")

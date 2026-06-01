@@ -792,3 +792,6 @@ class RunnerDual(Runner):
                 num_train_rays_per_sec = num_train_rays_per_step * num_train_steps_per_sec
                 self.viewer.render_tab_state.num_train_rays_per_sec = num_train_rays_per_sec
                 self.viewer.update(step, num_train_rays_per_step)
+
+        if cfg.save_last_ckpt:
+            self.save_last_ckpt(step=effective_step, global_step=int(step))
