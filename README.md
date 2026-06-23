@@ -164,6 +164,12 @@ bash scripts/run_scene_pipeline.sh \
   --data-dir /cluster/scratch/rbollati/new_exp/360_v2/garden_sparse
 ```
 
+On the ETH cluster, if the `gsplat` environment requires the usual module/CUDA setup before training, add:
+
+```bash
+--cluster-gsplat-env
+```
+
 Train `depth-nerfacto` instead of `nerfacto`:
 
 ```bash

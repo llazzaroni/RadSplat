@@ -24,6 +24,7 @@ Core options:
   --vggt-env NAME                Conda env for VGGT preprocessing. Default: vggt
   --nerfstudio-env NAME          Conda env for Nerfstudio. Default: nerfstudio
   --gsplat-env NAME              Conda env for gsplat. Default: gsplat
+  --cluster-gsplat-env           Before gsplat training, run the ETH cluster module/CUDA setup.
 
 NeRF options:
   --num-ensembles N              Number of NeRF ensemble models. Default: 5
@@ -65,6 +66,7 @@ ARTIFACT_ROOT=""
 VGGT_ENV="vggt"
 NERFSTUDIO_ENV="nerfstudio"
 GSPLAT_ENV="gsplat"
+CLUSTER_GSPLAT_ENV=0
 
 NUM_ENSEMBLES=5
 NERF_METHOD="nerfacto"
@@ -100,6 +102,7 @@ while [[ $# -gt 0 ]]; do
     --vggt-env) VGGT_ENV="$2"; shift 2 ;;
     --nerfstudio-env) NERFSTUDIO_ENV="$2"; shift 2 ;;
     --gsplat-env) GSPLAT_ENV="$2"; shift 2 ;;
+    --cluster-gsplat-env) CLUSTER_GSPLAT_ENV=1; shift ;;
     --num-ensembles) NUM_ENSEMBLES="$2"; shift 2 ;;
     --nerf-method) NERF_METHOD="$2"; shift 2 ;;
     --nerf-max-steps) NERF_MAX_STEPS="$2"; shift 2 ;;
@@ -176,6 +179,31 @@ created_vggt=0
 created_aug=0
 
 source "$(conda info --base)/etc/profile.d/conda.sh"
+
+setup_cluster_gsplat_env() {
+  if [[ "$CLUSTER_GSPLAT_ENV" -ne 1 ]]; then
+    return
+  fi
+
+  command -v module >/dev/null 2>&1 || die "--cluster-gsplat-env was requested, but 'module' is not available in this shell"
+  command -v nvcc >/dev/null 2>&1 || true
+
+  log "Applying cluster gsplat environment setup"
+  module purge
+  module load stack/2024-06 gcc/12.2.0
+  module load cuda/12.1.1
+  module load eth_proxy
+
+  unset PYTHONPATH
+  export PYTHONNOUSERSITE=1
+  export CC=gcc
+  export CXX=g++
+  export CUDAHOSTCXX=g++
+  export CUDA_HOME
+  CUDA_HOME="$(dirname "$(dirname "$(which nvcc)")")"
+  export PATH="$CUDA_HOME/bin:$PATH"
+  export LD_LIBRARY_PATH="$CUDA_HOME/lib64:${LD_LIBRARY_PATH:-}"
+}
 
 colmap_model_exists() {
   local base="$1"
@@ -375,6 +403,7 @@ train_gsplat() {
   [[ ! -e "$GSPLAT_RESULT_DIR" ]] || die "gsplat result directory already exists: $GSPLAT_RESULT_DIR"
   mkdir -p "$GSPLAT_RESULT_DIR"
 
+  setup_cluster_gsplat_env
   conda activate "$GSPLAT_ENV"
   pushd "$REPO_ROOT" >/dev/null
 
